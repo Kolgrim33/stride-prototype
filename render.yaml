@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: stride-guide
+    runtime: node
+    plan: free
+    buildCommand: "true"
+    startCommand: node server/chat-server.js
+    healthCheckPath: /health
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: openai/gpt-4o-mini
