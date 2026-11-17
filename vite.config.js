@@ -16,6 +16,18 @@ function devApi(env) {
         : (await import('./server/memory-store.js')).createMemoryStore();
       const handle = createHandler({ store, allowReset: !useSupabase || env.STRIDE_ALLOW_RESET === 'true' });
       server.config.logger.info(`  Stride API: /api/rpc using ${useSupabase ? 'Supabase' : 'an in-memory database'}`);
+      const { createAssistant } = await import('./server/assistant.js');
+      const assist = createAssistant({ apiKey: env.OPENROUTER_API_KEY, model: env.OPENROUTER_MODEL || undefined });
+      server.middlewares.use('/api/chat', (req, res) => {
+        let raw = '';
+        req.on('data', (chunk) => (raw += chunk));
+        req.on('end', async () => {
+          const out = await assist(JSON.parse(raw || '{}'));
+          res.statusCode = out.status;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(out.body));
+        });
+      });
       server.middlewares.use('/api/rpc', (req, res) => {
         let raw = '';
         req.on('data', (chunk) => (raw += chunk));

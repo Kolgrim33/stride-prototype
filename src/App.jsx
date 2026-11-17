@@ -10,6 +10,7 @@ import Learn from './screens/Learn.jsx';
 import Lesson from './screens/Lesson.jsx';
 import Mentor from './screens/Mentor.jsx';
 import Chat from './screens/Chat.jsx';
+import Assistant from './screens/Assistant.jsx';
 import Account from './screens/Account.jsx';
 import Guardian from './screens/Guardian.jsx';
 import GuardianControls from './screens/GuardianControls.jsx';
@@ -51,6 +52,7 @@ function resolve(parts, user, db) {
 
   if (role === 'teen') {
     if (name === 'swipe') return { screen: <Swipe /> };
+    if (name === 'assistant') return { screen: <Assistant /> };
     if ((name === 'chat' || name === 'ask') && db.mentors[a]) return { screen: <Chat key={a} teenId={user.id} mentorId={a} /> };
   }
   if (role === 'guardian') {

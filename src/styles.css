@@ -2909,3 +2909,56 @@ body {
 .cat.is-fav span { color: var(--ink); }
 .plan-tile.is-club { background: #42664f; }
 .record-card { background: var(--ink); }
+
+/* Stride Guide */
+.guide-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.guide-card .row-title { color: var(--ink); }
+.guide-starters { flex-direction: row !important; flex-wrap: wrap; gap: 8px; }
+.chip-btn {
+  padding: 9px 14px;
+  border: 1px solid var(--field-line);
+  border-radius: 999px;
+  background: var(--white);
+  font-size: 14px;
+  text-align: left;
+}
+.chip-btn:hover { border-color: var(--accent); color: var(--accent); }
+.guide-typing { flex-direction: row; gap: 5px; align-items: center; }
+.guide-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: 0.35; animation: guide-dot 1s infinite; }
+.guide-typing span:nth-child(2) { animation-delay: 0.15s; }
+.guide-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes guide-dot { 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .guide-typing span { animation: none; opacity: 0.7; } }
+
+/* Website layout: story on the left, the app on the right */
+.site-aside { display: none; }
+@media (min-width: 1000px) {
+  body { padding-left: 44vw; }
+  .site-aside {
+    position: fixed;
+    inset: 0 auto 0 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    width: 44vw;
+    padding: 0 clamp(40px, 6vw, 96px);
+  }
+  .site-eyebrow { margin: 0; color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+  .site-title { margin: 0; max-width: 11em; font-family: var(--serif); font-size: clamp(44px, 4.6vw, 72px); font-weight: 400; line-height: 1.02; letter-spacing: -0.02em; }
+  .site-copy { margin: 0; max-width: 30em; color: var(--muted); font-size: 17px; line-height: 1.55; }
+  .site-points { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; font-size: 15px; }
+  .site-points li { padding-left: 18px; border-left: 2px solid var(--coral); }
+  .site-note { margin: 0; color: var(--subtle); font-size: 13px; }
+  .app { box-shadow: 0 0 0 1px var(--line), 0 30px 80px -30px rgba(28, 26, 22, 0.25); }
+  .tabbar { left: 44vw; }
+}

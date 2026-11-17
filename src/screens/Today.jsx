@@ -83,6 +83,15 @@ export default function Today() {
         );
       })}
 
+      <a className="guide-card" href="#/assistant">
+        <Icon name="sparkles" size={20} strokeWidth={1.7} />
+        <span className="stack-2 grow">
+          <span className="row-title">Ask Stride Guide</span>
+          <span className="row-meta">Not sure what to do next? Get a suggestion.</span>
+        </span>
+        <Icon name="arrowRight" size={16} strokeWidth={1.8} color="var(--subtle)" />
+      </a>
+
       <section className="card" aria-label="Your clubs this week">
         {myClubs.map((club) => {
           const friends = clubFriends[club.id] || [];
