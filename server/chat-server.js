@@ -48,6 +48,12 @@ http
         return send(400, { error: 'Bad request.' });
       }
       if (isRpc) {
+        try {
+          rpcHandler();
+        } catch (error) {
+          console.error('[stride] database setup failed:', error.message);
+          return send(503, { error: 'The database is not connected yet.' });
+        }
         const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '') || null;
         const out = await rpcHandler()({ method: body.method, args: body.args, token });
         return send(out.status, out.body);
