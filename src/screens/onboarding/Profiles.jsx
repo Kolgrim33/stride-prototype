@@ -14,7 +14,7 @@ export function RoleChoice({ identity, go, onSignOut }) {
   return (
     <main className="page onboard">
       <Wordmark size="md" />
-      <StepHeader kicker={identity?.email} title="Who are you on Stride?">
+      <StepHeader photo="chess" kicker={identity?.email} title="Who are you on Stride?">
         You can only pick once for this Google account.
       </StepHeader>
       <ul className="role-list">
@@ -111,7 +111,7 @@ export function Pending({ user, onSignOut }) {
   return (
     <main className="page onboard">
       <Wordmark size="md" />
-      <StepHeader kicker="Mentor account" title={`Thanks, ${user.name.split(' ')[0]}`}>
+      <StepHeader photo="circuit" kicker="Mentor account" title={`Thanks, ${user.name.split(' ')[0]}`}>
         Stride is checking your details. Until we approve you, teens can't see your profile and you can't message anyone. Open Stride again later and this page will change once you're approved.
       </StepHeader>
       <button type="button" className="btn btn-quiet" onClick={onSignOut}>Sign out</button>

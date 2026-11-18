@@ -14,7 +14,12 @@ export function createRemoteBackend({ endpoint = `${API_URL}/api/rpc`, fetchImpl
     listeners.forEach((fn) => fn());
   };
 
+  // Replies can arrive out of order (a slow poll finishing after a sign-up). Only the newest request may publish.
+  let sent = 0;
+  let applied = 0;
+
   async function call(method, args = []) {
+    const seq = ++sent;
     const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
     let response;
     try {
@@ -27,8 +32,15 @@ export function createRemoteBackend({ endpoint = `${API_URL}/api/rpc`, fetchImpl
       throw new ApiError("Can't reach Stride. Check your connection and try again.", 0);
     }
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new ApiError(body.error || 'Something went wrong. Try again.', response.status);
-    if (body.snapshot) publish({ ...body.snapshot, ready: true, error: null });
+    if (!response.ok) {
+      // The account already has a profile, so this screen is out of date: reload the real state and move on.
+      if (response.status === 409 && /already has a Stride profile/.test(body.error || '')) api.refresh();
+      throw new ApiError(body.error || 'Something went wrong. Try again.', response.status);
+    }
+    if (body.snapshot && seq > applied) {
+      applied = seq;
+      publish({ ...body.snapshot, ready: true, error: null });
+    }
     return body.value;
   }
 

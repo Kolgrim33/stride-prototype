@@ -1,8 +1,8 @@
 import { Icon } from '../icons.jsx';
-import Art from './Art.jsx';
+import Photo from './Photo.jsx';
 
 // Header for onboarding steps: back, progress through the current path, title.
-export default function StepHeader({ onBack, step, total, kicker, title, children }) {
+export default function StepHeader({ onBack, step, total, kicker, title, photo = 'notebook', children }) {
   return (
     <header className="stack-12">
       <div className="step-top">
@@ -26,7 +26,7 @@ export default function StepHeader({ onBack, step, total, kicker, title, childre
           </div>
         )}
       </div>
-      <Art name="setup" strip />
+      <Photo name={photo} />
       {kicker && <span className="kicker">{kicker}</span>}
       <h1 className="h1">{title}</h1>
       {children && <p className="body-muted">{children}</p>}

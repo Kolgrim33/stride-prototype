@@ -1,3 +1,4 @@
+import Photo from '../components/Photo.jsx';
 import Art from '../components/Art.jsx';
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
@@ -85,6 +86,7 @@ export default function Guardian() {
           <Icon name="plus" size={18} strokeWidth={2} />
           Add a teen
         </button>
+        <Photo name="notebook" tall />
       </main>
     );
   }

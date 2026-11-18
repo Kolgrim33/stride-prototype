@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Photo from '../../components/Photo.jsx';
 import Wordmark from '../../components/Wordmark.jsx';
 import FieldError from '../../components/FieldError.jsx';
 import { attempt, useBackend } from '../../api/index.jsx';
@@ -37,6 +38,8 @@ export default function Welcome() {
           Clubs, mentors and short lessons for 12 to 17 year olds in Zimbabwe.
         </p>
       </div>
+
+      <Photo name="pitch" tall />
 
       <ol className="how">
         <li>A guardian adds their teen and approves every club.</li>

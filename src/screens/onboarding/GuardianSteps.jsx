@@ -52,7 +52,7 @@ export function ChildProfile({ draft, update, back, onActivate, step = 2, total 
 
   return (
     <main className="page onboard">
-      <StepHeader onBack={back} step={step} total={total} kicker="Teen profile" title="About your teen">
+      <StepHeader photo="chess" onBack={back} step={step} total={total} kicker="Teen profile" title="About your teen">
         Only you and their club leaders see their full name.
       </StepHeader>
 
@@ -112,7 +112,7 @@ export function Activated({ draft, onDashboard }) {
 
   return (
     <main className="page onboard">
-      <StepHeader title={`Give ${draft.teenName} this code`}>
+      <StepHeader photo="pitch" title={`Give ${draft.teenName} this code`}>
         {draft.teenName} opens Stride, signs in with their own Google account, and types the code. It works once.
       </StepHeader>
 

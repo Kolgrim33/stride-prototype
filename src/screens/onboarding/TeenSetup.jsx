@@ -14,7 +14,7 @@ export default function TeenSetup({ draft, update, onDone, error, busy }) {
 
   return (
     <main className="page onboard">
-      <StepHeader kicker={`Hi ${draft.teenName}`} title="Make it yours">
+      <StepHeader photo="pitch" kicker={`Hi ${draft.teenName}`} title="Make it yours">
         Your guardian set things up. Now pick what you're into.
       </StepHeader>
 
