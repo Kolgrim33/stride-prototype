@@ -105,6 +105,60 @@ describe('mentors need approval', () => {
   });
 });
 
+describe('money owed', () => {
+  async function setup(fee) {
+    const { seedClubs } = await import('./clubs.js');
+    seedClubs.push({ id: 'chess', name: 'Chess', type: 'Study', day: 2, leaderEmail: 'mo@x.com', sessionFeeCents: fee, currency: 'USD' });
+    await ok('ann|ann@x.com', 'registerGuardian', { name: 'Ann Moyo' });
+    const { value: teenId } = await ok('ann|ann@x.com', 'createTeen', { name: 'Tino', dob });
+    const { value: userId } = await ok('mo|mo@x.com', 'registerMentor', { name: 'Mo Dube', role: 'Coach' });
+    const db = await store.load();
+    db.users[userId].approved = true;
+    const code = db.users[teenId].joinCode;
+    await store.saveChanges({ users: { upsert: [db.users[userId]], remove: [] } });
+    await ok('tino|', 'joinWithCode', code);
+    // membership as the rules would create it after a guardian approves
+    const m = await store.load();
+    m.memberships.m1 = { id: 'm1', teenId, clubId: 'chess', since: '2026-11-01' };
+    await store.saveChanges({ memberships: { upsert: [m.memberships.m1], remove: [] } });
+    return teenId;
+  }
+  const mark = (teenId, present = true) => call('mo|mo@x.com', 'setAttendance', { teenId, clubId: 'chess', date: '2026-11-09', present });
+
+  it('a confirmed session adds the fee once, however many times it is confirmed', async () => {
+    const teenId = await setup(500);
+    await ok('mo|mo@x.com', 'setAttendance', { teenId, clubId: 'chess', date: '2026-11-09', present: true });
+    await ok('mo|mo@x.com', 'setAttendance', { teenId, clubId: 'chess', date: '2026-11-09', present: true });
+    const rows = Object.values((await store.load()).ledger);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ amountCents: 500, currency: 'USD', status: 'accrued' });
+  });
+
+  it('un-marking a session removes its entry', async () => {
+    const teenId = await setup(500);
+    await mark(teenId);
+    await mark(teenId, false);
+    expect(Object.keys((await store.load()).ledger)).toHaveLength(0);
+  });
+
+  it('a free club records nothing', async () => {
+    const teenId = await setup(0);
+    await mark(teenId);
+    expect(Object.keys((await store.load()).ledger)).toHaveLength(0);
+  });
+
+  it('the family and the club see it; the teen and other families do not', async () => {
+    const teenId = await setup(500);
+    await mark(teenId);
+    const rows = async (token) => Object.keys((await ok(token, 'snapshot')).snapshot.db.ledger);
+    expect(await rows('ann|ann@x.com')).toHaveLength(1);
+    expect(await rows('mo|mo@x.com')).toHaveLength(1);
+    expect(await rows('tino|')).toHaveLength(0);
+    await ok('bob|bob@x.com', 'registerGuardian', { name: 'Bob' });
+    expect(await rows('bob|bob@x.com')).toHaveLength(0);
+  });
+});
+
 describe('diff', () => {
   it('finds changed, added and removed rows', () => {
     const a = { users: { u1: { id: 'u1', n: 1 }, u2: { id: 'u2' } } };

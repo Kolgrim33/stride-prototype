@@ -71,5 +71,8 @@ export function visibleTo(db, userId) {
     copy('messages', mine);
   }
   copy('reports', (r) => r.by === user.id);
+  // A family sees what its own teens' sessions have added up to; a club sees what its own sessions have.
+  if (user.role === 'guardian') copy('ledger', (r) => r.guardianId === user.id);
+  if (user.role === 'mentor') copy('ledger', (r) => db.clubs[r.clubId]?.mentorId === user.mentorId);
   return out;
 }

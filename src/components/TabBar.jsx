@@ -1,4 +1,5 @@
 import { Icon } from '../icons.jsx';
+import Wordmark from './Wordmark.jsx';
 
 export const roleTabs = {
   teen: [
@@ -25,6 +26,9 @@ export const roleTabs = {
 export default function TabBar({ role, active, badges = {} }) {
   return (
     <nav className="tabbar" aria-label="Main">
+      <span className="rail-brand" aria-hidden="true">
+        <Wordmark size="md" />
+      </span>
       {roleTabs[role].map((tab) => {
         const on = tab.id === active;
         return (

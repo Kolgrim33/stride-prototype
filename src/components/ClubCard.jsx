@@ -1,4 +1,5 @@
 import { Icon } from '../icons.jsx';
+import { feeLabel } from '../api/money.js';
 import Cover from './Cover.jsx';
 
 const statusTag = {
@@ -35,7 +36,7 @@ export default function ClubCard({ club, status }) {
           </span>
         </span>
         <span className="club-card-foot">
-          <span className="price">{club.cost?.price}</span>
+          <span className="price">{feeLabel(club)}</span>
           {statusTag[status]}
         </span>
       </span>

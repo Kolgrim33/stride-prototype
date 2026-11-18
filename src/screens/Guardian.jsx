@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
+import { feeLabel, money, owed } from '../api/money.js';
 import Cover from '../components/Cover.jsx';
 import SectionHead from '../components/SectionHead.jsx';
 import Status from '../components/Status.jsx';
@@ -30,6 +31,7 @@ function RequestCard({ db, kid, request, api }) {
           </span>
           <span className="row-meta">
             {club.short} · {club.lead}
+            {feeLabel(club) ? ` · ${feeLabel(club)}` : ''}
           </span>
         </div>
       </div>
@@ -173,6 +175,29 @@ export default function Guardian() {
           {requests.filter((r) => db.clubs[r.clubId]).map((r) => (
             <RequestCard key={r.id} db={db} kid={kid} request={r} api={api} />
           ))}
+        </>
+      )}
+
+      {Object.values(db.clubs).some((c) => c.sessionFeeCents > 0 && clubIdsOf(db, kid.id).includes(c.id)) && (
+        <>
+          <SectionHead title="Owed so far" />
+          <section className="panel panel-list" aria-label={`Fees owed for ${kid.name}`}>
+            {clubIdsOf(db, kid.id).filter((id) => db.clubs[id]?.sessionFeeCents > 0).map((id) => {
+              const total = owed(db, (r) => r.teenId === kid.id && r.clubId === id);
+              return (
+                <div className="club-line" key={id}>
+                  <span className="stack-2 grow">
+                    <span className="row-title">{db.clubs[id].name}</span>
+                    <span className="row-meta">
+                      {total.sessions} confirmed {total.sessions === 1 ? 'session' : 'sessions'} at {money(db.clubs[id].sessionFeeCents, db.clubs[id].currency)}
+                    </span>
+                  </span>
+                  <span className="num">{money(total.cents, db.clubs[id].currency)}</span>
+                </div>
+              );
+            })}
+          </section>
+          <p className="fine fine-left">A record of confirmed sessions only. Nothing has been charged.</p>
         </>
       )}
 

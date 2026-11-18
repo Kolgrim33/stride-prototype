@@ -7,6 +7,7 @@ import FieldError from '../components/FieldError.jsx';
 import MentorAvatar from '../components/MentorAvatar.jsx';
 import { attempt, useBackend } from '../api/index.jsx';
 import { clubChecks } from '../data.js';
+import { feeLabel, money } from '../api/money.js';
 import { clubStatus, membersOf, requestFor, teensOf } from '../api/selectors.js';
 import { nextSessionDates } from '../api/dates.js';
 
@@ -112,10 +113,14 @@ export default function ClubDetail({ club }) {
         </section>
         )}
 
-        {club.cost && (
+        {feeLabel(club) && (
           <section className="cost" aria-label="Cost">
-            <span className="cost-price">{club.cost.price}</span>
-            <span className="row-meta">{club.cost.note}</span>
+            <span className="cost-price">{feeLabel(club)}</span>
+            <span className="row-meta">
+              {club.sessionFeeCents > 0
+                ? `${money(club.sessionFeeCents, club.currency)} for each session the leader confirms ${user.role === 'teen' ? 'you attended' : 'was attended'}. Nothing is charged yet: Stride only records it, so your guardian can see what it adds up to.`
+                : 'No fee for this club.'}
+            </span>
           </section>
         )}
       </main>

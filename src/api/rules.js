@@ -62,7 +62,7 @@ function normaliseConsent(consent) {
 }
 
 function removeTeenRows(db, teenId) {
-  for (const name of ['memberships', 'requests', 'attendance', 'tasks', 'badges', 'messages', 'reports']) {
+  for (const name of ['memberships', 'requests', 'attendance', 'tasks', 'badges', 'messages', 'reports', 'ledger']) {
     for (const row of values(db[name])) if (row.teenId === teenId) delete db[name][row.id];
   }
   delete db.users[teenId];
@@ -250,8 +250,21 @@ const methods = {
     check(/^\d{4}-\d{2}-\d{2}$/.test(String(date || '')), 'Pick a session date.', 400);
     check(date <= isoDate(c.now), "You can't mark a session that hasn't happened yet.", 400);
     const id = `a_${teenId}_${clubId}_${date}`;
-    if (present) db.attendance[id] = { id, teenId, clubId, date, confirmedBy: mentor.mentorId, at: c.nowIso };
-    else delete db.attendance[id];
+    const entryId = `l_${id}`; // one ledger row per attendance, so confirming twice can't double count
+    if (present) {
+      db.attendance[id] = { id, teenId, clubId, date, confirmedBy: mentor.mentorId, at: c.nowIso };
+      const fee = Number(club.sessionFeeCents) || 0;
+      if (fee > 0 && !db.ledger[entryId]) {
+        db.ledger[entryId] = {
+          id: entryId, attendanceId: id, clubId, teenId, guardianId: db.users[teenId]?.guardianId || null,
+          amountCents: fee, currency: club.currency || 'USD', status: 'accrued', at: c.nowIso
+        };
+      }
+    } else {
+      check(!db.ledger[entryId] || db.ledger[entryId].status === 'accrued', 'This session has already been billed, so it cannot be un-marked.', 409);
+      delete db.attendance[id];
+      delete db.ledger[entryId];
+    }
     return present ? id : null;
   },
 

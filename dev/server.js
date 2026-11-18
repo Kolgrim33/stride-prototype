@@ -2,6 +2,20 @@
 import http from 'node:http';
 import { createHandler } from '../server/handler.js';
 import { createMemoryStore } from '../server/memory-store.js';
+import { seedClubs } from '../server/clubs.js';
+
+// Test-only clubs so screens have something to show. Production clubs live in server/clubs.js.
+const c = (id, name, type, day, time, when, short, lead, fee) => ({
+  id, name, type, day, time, when, short, ages: 'Ages 12 to 17', range: '12–17', lead, session: 'Session', confirmer: 'Coach',
+  note: 'Coaches confirm attendance.', about: `Weekly ${name.toLowerCase()} sessions with a checked leader.`, leaderEmail: id === 'chess' ? 'mo@example.com' : null,
+  sessionFeeCents: fee, currency: 'USD', verified: id !== 'robotics'
+});
+seedClubs.push(
+  c('chess', 'Chess and Debate Club', 'Study', 2, '4:00 pm', 'Tuesdays, 4:00 pm', 'Tue, 4:00 pm', 'Coach · Mo D.', 500),
+  c('football', 'Football Academy', 'Sport', 6, '9:00 am', 'Saturdays, 9:00 am', 'Sat, 9:00 am', 'Coach · Test C.', 0),
+  c('robotics', 'Robotics Lab', 'STEM', 5, '4:00 pm', 'Fridays, 4:00 pm', 'Fri, 4:00 pm', 'Mentor · Test R.', 300),
+  c('choir', 'Community Choir', 'Arts', 4, '4:30 pm', 'Thursdays, 4:30 pm', 'Thu, 4:30 pm', 'Leader · Test L.', 0)
+);
 
 const store = createMemoryStore();
 const handle = createHandler({

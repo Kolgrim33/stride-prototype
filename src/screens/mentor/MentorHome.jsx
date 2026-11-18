@@ -6,6 +6,7 @@ import MentorAvatar from '../../components/MentorAvatar.jsx';
 import MeDot from '../../components/MeDot.jsx';
 import { attempt, useBackend } from '../../api/index.jsx';
 import { ledClubs, membersOf, tasksToReview, teensOfMentor, unreadCount } from '../../api/selectors.js';
+import { feeLabel, money, owed } from '../../api/money.js';
 import { addDays, formatDay, formatWhenShort, isoDate, lastSessionDate } from '../../api/dates.js';
 
 function TaskCard({ db, task, api }) {
@@ -87,6 +88,11 @@ function Register({ db, club, api }) {
           {members.filter((m) => here.has(m.id)).length} of {members.length} here
         </span>
       </div>
+      {club.sessionFeeCents > 0 && (
+        <p className="row-meta">
+          {feeLabel(club)} · owed so far {money(owed(db, (r) => r.clubId === club.id).cents, club.currency)} ({owed(db, (r) => r.clubId === club.id).sessions} confirmed). Nothing has been charged.
+        </p>
+      )}
       <div className="week-switch">
         <button type="button" className="icon-btn" aria-label="Earlier session" disabled={weeksBack >= 8} onClick={() => setWeeksBack((w) => w + 1)}>
           <Icon name="back" size={18} />

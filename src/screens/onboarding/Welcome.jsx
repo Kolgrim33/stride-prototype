@@ -24,7 +24,8 @@ export default function Welcome() {
   };
 
   return (
-    <main className="page onboard">
+    <main className="page onboard welcome">
+      <div className="welcome-copy">
       <div className="onboard-hero">
         <Wordmark size="lg" />
         <h1 className="display">
@@ -42,6 +43,7 @@ export default function Welcome() {
         <li>Mentors are approved by Stride before any teen can see them.</li>
         <li>Messages stay inside Stride, and the guardian can read all of them.</li>
       </ol>
+      </div>
 
       <div className="stack-12 onboard-actions">
         <button type="button" className="btn btn-google" disabled={busy} onClick={start}>

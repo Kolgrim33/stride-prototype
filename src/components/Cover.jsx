@@ -3,11 +3,10 @@ import { categoryIcon } from '../data.js';
 
 const iconSize = { sm: 24, md: 40, lg: 56 };
 
-// Artwork for a club or lesson. `photo` is a club id with a photo in public/clubs, `image` is any
-// other photo path; without either it falls back to a tint coloured by category.
+// Artwork for a club or lesson. `image` is a photo URL; without one it is a tint of the category colour with its icon.
 // `label` shows the category name instead of the icon.
 export default function Cover({ type, size = 'md', label = false, photo, image, children }) {
-  const src = image || photo || null;
+  const src = image || null;
   return (
     <div className={`cover cover-${size}`} data-type={type}>
       {src ? (
