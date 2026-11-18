@@ -1,4 +1,3 @@
-import Art from '../components/Art.jsx';
 import { Icon, HeartFill } from '../icons.jsx';
 import Cover from '../components/Cover.jsx';
 import SectionHead from '../components/SectionHead.jsx';
@@ -56,7 +55,6 @@ export default function Today() {
       </div>
 
       <header className="title-block">
-        <Art name="today" />
         <h1 className="h1">Hi, {teen.nickname}</h1>
         <div className="subline">
           <span>

@@ -1,4 +1,3 @@
-import Art from '../components/Art.jsx';
 import { useState } from 'react';
 import { Icon } from '../icons.jsx';
 import NavBar from '../components/NavBar.jsx';
@@ -32,7 +31,6 @@ export default function GuardianControls() {
     return (
       <main className="page">
         <NavBar title="Controls" back="#/guardian" />
-        <Art name="controls" strip />
         <p className="body-muted">Add a teen first. Their controls show up here.</p>
       </main>
     );
@@ -69,7 +67,6 @@ export default function GuardianControls() {
   return (
     <main className="page">
       <NavBar title="Controls" back="#/guardian" />
-      <Art name="controls" strip />
 
       {teens.length > 1 && (
         <div className="chips" role="group" aria-label="Choose a teen">
@@ -92,7 +89,6 @@ export default function GuardianControls() {
       )}
 
       <header className="title-block">
-        <Art name="controls" />
         <h1 className="h1">{kid.name}'s account</h1>
         <div className="subline">
           <span>

@@ -1,5 +1,4 @@
 import Photo from '../components/Photo.jsx';
-import Art from '../components/Art.jsx';
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { feeLabel, money, owed } from '../api/money.js';
@@ -78,7 +77,6 @@ export default function Guardian() {
     return (
       <main className="page">
         <header className="title-block">
-        <Art name="family" />
           <h1 className="h1">Hi, {user.name.split(' ')[0]}</h1>
           <p className="body-muted">Add your teen to open their account. You choose what they can use.</p>
         </header>
@@ -124,7 +122,6 @@ export default function Guardian() {
       )}
 
       <header className="title-block">
-        <Art name="family" />
         <h1 className="h1">Week plan</h1>
         <div className="subline">
           <span>

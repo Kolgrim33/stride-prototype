@@ -1,4 +1,3 @@
-import Art from '../components/Art.jsx';
 import { Icon, PlayFill } from '../icons.jsx';
 import Cover from '../components/Cover.jsx';
 import SectionHead from '../components/SectionHead.jsx';
@@ -47,7 +46,6 @@ export default function Learn() {
       </div>
 
       <header className="title-block">
-        <Art name="learn" />
         <h1 className="h1">Learn</h1>
         <div className="subline">
           <span>

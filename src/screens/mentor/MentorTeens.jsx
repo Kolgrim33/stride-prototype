@@ -1,4 +1,3 @@
-import Art from '../../components/Art.jsx';
 import { Icon } from '../../icons.jsx';
 import MeDot from '../../components/MeDot.jsx';
 import { useBackend } from '../../api/index.jsx';
@@ -12,7 +11,6 @@ export default function MentorTeens() {
   return (
     <main className="page">
       <header className="title-block">
-        <Art name="teens" />
         <h1 className="h1">Your teens</h1>
         <div className="subline">
           <span>

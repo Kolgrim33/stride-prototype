@@ -1,4 +1,3 @@
-import Art from '../components/Art.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import NavBar from '../components/NavBar.jsx';
@@ -58,7 +57,6 @@ export default function Chat({ teenId, mentorId, readOnly = false }) {
     <div className="detail">
       <main className="page">
         <NavBar title={title} back={back} />
-        <Art name="mentor" strip />
 
         {user.role === 'mentor' ? (
           <div className="confirmer">

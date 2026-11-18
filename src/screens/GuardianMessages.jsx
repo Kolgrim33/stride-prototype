@@ -1,4 +1,3 @@
-import Art from '../components/Art.jsx';
 import { Icon } from '../icons.jsx';
 import MentorAvatar from '../components/MentorAvatar.jsx';
 import { useBackend } from '../api/index.jsx';
@@ -14,7 +13,6 @@ export default function GuardianMessages() {
   return (
     <main className="page">
       <header className="title-block">
-        <Art name="messages" />
         <h1 className="h1">Messages</h1>
         <div className="subline">
           <span>

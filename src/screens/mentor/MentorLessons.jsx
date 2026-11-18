@@ -1,4 +1,3 @@
-import Art from '../../components/Art.jsx';
 import { Icon, PlayFill } from '../../icons.jsx';
 import Cover from '../../components/Cover.jsx';
 import { useBackend } from '../../api/index.jsx';
@@ -13,7 +12,6 @@ export default function MentorLessons() {
   return (
     <main className="page">
       <header className="title-block">
-        <Art name="lessons" />
         <h1 className="h1">Lessons</h1>
         <div className="subline">
           <span>

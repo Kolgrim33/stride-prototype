@@ -1,4 +1,3 @@
-import Art from '../../components/Art.jsx';
 import { useState } from 'react';
 import { Icon } from '../../icons.jsx';
 import SectionHead from '../../components/SectionHead.jsx';
@@ -148,7 +147,6 @@ export default function MentorHome() {
       </div>
 
       <header className="title-block">
-        <Art name="desk" />
         <h1 className="h1">Hi, {profile.first}</h1>
         <div className="subline">
           <span>{today}</span>
