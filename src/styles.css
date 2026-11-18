@@ -1,6 +1,6 @@
 /* Stride design tokens. Warm paper ground, green-black ink, one deep green accent. Surfaces are
    flat and hairline-ruled, not floating: no drop shadows, small radii, a flush tab bar.
-   Atkinson Hyperlegible for text (made for legibility), Instrument Serif for headlines. */
+   Public Sans for text, Big Shoulders Display (jersey-number lettering) for headlines. */
 :root {
   --ground: #f4f6f1;
   --surface: #e6ebe1;
@@ -23,8 +23,8 @@
   --video: #0c1a14;
   --radius: 18px;
   --shadow: 0 0 0 1px var(--line);
-  --font: 'Atkinson Hyperlegible', system-ui, sans-serif;
-  --display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --font: 'Public Sans Variable', system-ui, sans-serif;
+  --display: 'Big Shoulders Display Variable', 'Arial Narrow', sans-serif;
   --serif: var(--display);
   --signal: #ffd23f;
 }
@@ -3083,3 +3083,13 @@ a, button { touch-action: manipulation; }
 .welcome .wordmark { --mark: var(--accent); }
 .wordmark > span { font-weight: 780; letter-spacing: -0.03em; }
 @media (min-width: 900px) { .onboard.welcome .onboard-actions { background: #fff; color: var(--ink); } .welcome .onboard-actions small, .welcome .onboard-actions .fine { color: var(--muted); } }
+
+/* Big Shoulders is condensed: run headlines larger and un-tightened so they read as lettering. */
+.h1, .display, .h1-detail, .h1-profile, h1, h2, h3, .wordmark > span { font-weight: 800; letter-spacing: 0.005em; line-height: 0.98; }
+.h1 { font-size: 54px; }
+.h1-detail, .h1-profile { font-size: 44px; }
+.display { font-size: 68px; }
+.wordmark > span { letter-spacing: 0.01em; }
+.wordmark > span { font-size: 36px; }
+.wordmark-lg > span { font-size: 44px; }
+h2, h3 { font-size: 1.35em; }
