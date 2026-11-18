@@ -143,10 +143,6 @@ export default function MentorHome() {
       <header className="title-block">
         <h1 className="h1">Hi, {profile.first}</h1>
         <div className="subline">
-          <span className="tag tag-blue">
-            <Icon name="shield" size={12} strokeWidth={2.4} />
-            {profile.badge}
-          </span>
           <span>{today}</span>
         </div>
       </header>

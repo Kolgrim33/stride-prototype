@@ -1,150 +1,116 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createHandler, diff } from './handler.js';
 import { createMemoryStore } from './memory-store.js';
-import { fromRow, toRow } from './schema.js';
-import { createSeed } from '../src/api/seed.js';
 
 const NOW = new Date(2026, 10, 10, 12, 0);
 let handle;
 let store;
 
-async function signIn(login, secret) {
-  const res = await handle({ method: 'signIn', args: [{ login, secret }] });
-  expect(res.status).toBe(200);
-  return res.body.token;
-}
+// A fake token is "uid|email"; the real server verifies a Firebase ID token instead.
+const verifyToken = async (token) => {
+  const [uid, email] = token.split('|');
+  if (!uid) throw new Error('bad');
+  return { uid, email, name: uid };
+};
+const call = (token, method, ...args) => handle({ token, method, args });
+const ok = async (...a) => {
+  const res = await call(...a);
+  expect(res.status, res.body.error).toBe(200);
+  return res.body;
+};
+const dob = '2012-03-04';
 
 beforeEach(() => {
   store = createMemoryStore();
-  handle = createHandler({ store, now: () => NOW });
+  handle = createHandler({ store, verifyToken, now: () => NOW });
 });
 
-describe('server handler', () => {
-  it('seeds an empty database with salted hashes and never sends secrets', async () => {
-    const res = await handle({ method: 'snapshot' });
-    expect(res.status).toBe(200);
-    expect(res.body.snapshot.session).toBe(null);
-    expect(Object.keys(res.body.snapshot.db.users)).toHaveLength(0);
-    expect(Object.keys(res.body.snapshot.db.clubs)).toHaveLength(7);
-    const saved = await store.load();
-    expect(saved.users.t_tino.secret).toMatch(/^scrypt\$/);
-
-    const token = await signIn('chiedza@example.com', 'stride');
-    const mine = await handle({ method: 'snapshot', token });
-    expect(Object.values(mine.body.snapshot.db.users).some((u) => 'secret' in u)).toBe(false);
+describe('sign-in with Google', () => {
+  it('starts empty: no users, no demo rows', async () => {
+    const { snapshot } = await ok(null, 'snapshot');
+    expect(snapshot.session).toBe(null);
+    for (const name of ['users', 'mentors', 'lessons', 'messages']) expect(Object.keys(snapshot.db[name])).toHaveLength(0);
   });
 
-  it('issues a token on sign-in and drops it on sign-out', async () => {
-    const token = await signIn('tino', '1234');
-    expect(token).toBeTruthy();
-    const me = await handle({ method: 'snapshot', token });
-    expect(me.body.snapshot.session).toEqual({ userId: 't_tino' });
-    const out = await handle({ method: 'signOut', token });
-    expect(out.body.token).toBe(null);
-    const after = await handle({ method: 'snapshot', token });
-    expect(after.body.snapshot.session).toBe(null);
+  it('rejects an expired or bad token', async () => {
+    const res = await handle({ token: '', method: 'snapshot' });
+    expect(res.status).toBe(200); // no token = signed out
+    const bad = await handle({ token: '|x', method: 'snapshot' });
+    expect(bad.status).toBe(401);
   });
 
-  it('refuses a wrong password with 401', async () => {
-    const res = await handle({ method: 'signIn', args: [{ login: 'tino', secret: '9999' }] });
-    expect(res.status).toBe(401);
-    expect(res.body.error).toMatch(/don't match/);
+  it('a new Google account has an identity but no profile until it picks a role', async () => {
+    const { snapshot } = await ok('ann|ann@x.com', 'snapshot');
+    expect(snapshot.session).toBe(null);
+    expect(snapshot.identity.email).toBe('ann@x.com');
+    const { snapshot: after } = await ok('ann|ann@x.com', 'registerGuardian', { name: 'Ann Moyo', relation: 'Mother' });
+    expect(after.session.userId).toBeTruthy();
+    expect((await call('ann|ann@x.com', 'registerGuardian', { name: 'Again' })).status).toBe(409);
   });
 
-  it("sends a guardian only their own family's rows", async () => {
-    const token = await signIn('tendai@example.com', 'stride');
-    const { db } = (await handle({ method: 'snapshot', token })).body.snapshot;
-    expect(db.users.t_tino).toBeUndefined();
-    expect(db.users.t_ropa).toBeDefined();
-    expect(Object.values(db.messages).every((m) => ['t_ropa', 't_kuda', 't_tapiwa', 't_farai'].includes(m.teenId))).toBe(true);
-    expect(Object.values(db.requests).some((r) => r.teenId === 't_tino')).toBe(false);
-  });
-
-  it('shows mentors nicknames only, and only their teens', async () => {
-    const token = await signIn('fabulous', 'stride');
-    const { db } = (await handle({ method: 'snapshot', token })).body.snapshot;
-    expect(db.users.t_tino.surname).toBeUndefined();
-    expect(db.users.t_tino.dob).toBeUndefined();
-    expect(db.users.t_ropa).toBeDefined(); // member of Junior Coders
-    expect(db.users.t_rudo).toBeUndefined();
-    expect(Object.values(db.messages).every((m) => m.mentorId === 'fabulous')).toBe(true);
-  });
-
-  it('runs the same rules as the local backend and saves the change', async () => {
-    const tino = await signIn('tino', '1234');
-    const asked = await handle({ method: 'requestClub', args: ['robotics'], token: tino });
-    expect(asked.status).toBe(200);
-    const chiedza = await signIn('chiedza@example.com', 'stride');
-    const tendai = await signIn('tendai@example.com', 'stride');
-    const refused = await handle({ method: 'decideRequest', args: [asked.body.value, 'approved'], token: tendai });
-    expect(refused.status).toBe(403);
-    await handle({ method: 'decideRequest', args: [asked.body.value, 'approved'], token: chiedza });
-    const saved = await store.load();
-    expect(Object.values(saved.memberships).some((m) => m.teenId === 't_tino' && m.clubId === 'robotics')).toBe(true);
-  });
-
-  it('switches the token to the teen on hand-over', async () => {
-    const reg = await handle({ method: 'registerGuardian', args: [{ name: 'Nyasha Banda', contact: 'nb@example.com', password: 'secret1' }] });
-    const teenId = (await handle({ method: 'createTeen', args: [{ name: 'Nyari', dob: '2012-05-01', login: 'nyari', pin: '4321' }], token: reg.body.token })).body.value;
-    const handed = await handle({ method: 'handOver', args: [teenId], token: reg.body.token });
-    expect(handed.body.snapshot.session.userId).toBe(teenId);
-    const guardianNow = await handle({ method: 'snapshot', token: reg.body.token });
-    expect(guardianNow.body.snapshot.session).toBe(null);
-    expect(await signIn('nyari', '4321')).toBeTruthy();
-  });
-
-  it('only resets the demo when allowed', async () => {
-    expect((await handle({ method: 'resetDemo' })).status).toBe(403);
-    const open = createHandler({ store, now: () => NOW, allowReset: true });
-    expect((await open({ method: 'resetDemo' })).status).toBe(200);
-  });
-
-  it('rejects unknown methods', async () => {
-    expect((await handle({ method: 'constructor' })).status).toBe(400);
+  it('never sends a Firebase uid to the browser', async () => {
+    await ok('ann|ann@x.com', 'registerGuardian', { name: 'Ann Moyo' });
+    const { snapshot } = await ok('ann|ann@x.com', 'snapshot');
+    expect(Object.values(snapshot.db.users).some((u) => 'uid' in u)).toBe(false);
   });
 });
 
-describe('storage mapping', () => {
-  it('round-trips every row through the Postgres column mapping', () => {
-    const db = createSeed(NOW);
-    for (const table of ['users', 'mentors', 'clubs', 'lessons', 'attendance', 'tasks', 'messages', 'badges']) {
-      for (const obj of Object.values(db[table])) {
-        const clean = JSON.parse(JSON.stringify(obj, (k, v) => (v === null ? undefined : v)));
-        expect(fromRow(table, toRow(table, obj))).toEqual(clean);
-      }
-    }
-    expect(toRow('messages', db.messages.msg_1)).toHaveProperty('sender', 'mentor');
+describe('teens join with a code', () => {
+  async function family() {
+    await ok('ann|ann@x.com', 'registerGuardian', { name: 'Ann Moyo' });
+    const { value: teenId } = await ok('ann|ann@x.com', 'createTeen', { name: 'Tino', dob });
+    const { snapshot } = await ok('ann|ann@x.com', 'snapshot');
+    return { teenId, code: snapshot.db.users[teenId].joinCode };
+  }
+
+  it('the guardian sees the code; the teen links their own Google account with it', async () => {
+    const { teenId, code } = await family();
+    expect(code).toMatch(/^[A-Z2-9]{6}$/);
+    const { snapshot } = await ok('tino|', 'joinWithCode', code);
+    expect(snapshot.session.userId).toBe(teenId);
+    expect(snapshot.db.users[teenId].joinCode).toBeUndefined();
+    expect((await call('eve|', 'joinWithCode', code)).status).toBe(404); // single use
   });
 
-  it('diffs only changed rows', () => {
-    const a = createSeed(NOW);
-    const b = structuredClone(a);
-    b.users.t_tino.goal = 3;
-    delete b.requests.r_tino_coders;
-    expect(diff(a, b)).toEqual({ users: { upsert: [b.users.t_tino], remove: [] }, requests: { upsert: [], remove: ['r_tino_coders'] } });
+  it('another family cannot see this teen', async () => {
+    const { teenId } = await family();
+    await ok('bob|bob@x.com', 'registerGuardian', { name: 'Bob Ncube' });
+    const { snapshot } = await ok('bob|bob@x.com', 'snapshot');
+    expect(snapshot.db.users[teenId]).toBeUndefined();
+  });
+
+  it('rejects teens outside 12 to 17', async () => {
+    await ok('ann|ann@x.com', 'registerGuardian', { name: 'Ann Moyo' });
+    expect((await call('ann|ann@x.com', 'createTeen', { name: 'Baby', dob: '2020-01-01' })).status).toBe(400);
   });
 });
 
-describe('seeding', () => {
-  it('survives two requests seeding an empty database at once', async () => {
-    const [a, b] = await Promise.all([handle({ method: 'snapshot' }), handle({ method: 'snapshot' })]);
-    expect(a.status).toBe(200);
-    expect(b.status).toBe(200);
-    const health = await handle({ method: 'health' });
-    expect(health.body.counts).toMatchObject({ clubs: 7, lessons: 6 });
-    expect(health.body.counts.users).toBeGreaterThan(10);
+describe('mentors need approval', () => {
+  it('can sign up but cannot act until Stride approves them', async () => {
+    await ok('mo|mo@x.com', 'registerMentor', { name: 'Mo Dube', role: 'Coach at Chess Club' });
+    const res = await call('mo|mo@x.com', 'saveLesson', { title: 'x' });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/checking your mentor account/);
+    const { snapshot } = await ok(null, 'snapshot');
+    expect(Object.keys(snapshot.db.mentors)).toHaveLength(0); // not public while pending
   });
 
-  it('fills in a half-finished seed without touching existing rows', async () => {
-    await handle({ method: 'snapshot' });
-    const token = await signIn('tino', '1234');
-    await handle({ method: 'updateTeenProfile', args: [{ goal: 3 }], token });
+  it('becomes public and active once approved', async () => {
+    const { value: userId } = await ok('mo|mo@x.com', 'registerMentor', { name: 'Mo Dube', role: 'Coach at Chess Club' });
     const saved = await store.load();
-    delete saved.clubs.football;
-    await store.replaceAll(saved);
-    await store.fillMissing(createSeed(NOW));
-    const after = await store.load();
-    expect(after.clubs.football).toBeDefined();
-    expect(after.users.t_tino.goal).toBe(3);
+    saved.users[userId].approved = true;
+    await store.saveChanges({ users: { upsert: [saved.users[userId]], remove: [] } });
+    const { snapshot } = await ok(null, 'snapshot');
+    expect(Object.keys(snapshot.db.mentors)).toHaveLength(1);
+  });
+});
+
+describe('diff', () => {
+  it('finds changed, added and removed rows', () => {
+    const a = { users: { u1: { id: 'u1', n: 1 }, u2: { id: 'u2' } } };
+    const b = { users: { u1: { id: 'u1', n: 2 }, u3: { id: 'u3' } } };
+    const d = diff(a, b).users;
+    expect(d.upsert.map((r) => r.id).sort()).toEqual(['u1', 'u3']);
+    expect(d.remove).toEqual(['u2']);
   });
 });

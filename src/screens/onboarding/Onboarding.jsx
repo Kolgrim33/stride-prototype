@@ -3,45 +3,23 @@ import { useStore } from '../../store.jsx';
 import { attempt, useBackend } from '../../api/index.jsx';
 import { defaultConsent } from '../../onboarding.js';
 import Welcome from './Welcome.jsx';
-import SignIn from './SignIn.jsx';
 import TeenSetup from './TeenSetup.jsx';
-import { Adult, AgeCheck, InviteGuardian, TooYoung, Waiting } from './TeenSteps.jsx';
-import { Activated, ChildProfile, ConsentStep, GuardianAccount, VerifyGuardian, suggestLogin } from './GuardianSteps.jsx';
+import { GuardianForm, JoinForm, MentorForm, Pending, RoleChoice } from './Profiles.jsx';
+import { Activated, ChildProfile, ConsentStep } from './GuardianSteps.jsx';
 
-const emptyDraft = {
-  dob: '',
-  teenName: '',
-  inviteContact: '',
-  guardianName: '',
-  guardianContact: '',
-  password: '',
-  relation: '',
-  method: '',
-  verifiedAt: null,
-  consent: defaultConsent,
-  quietHours: true,
-  login: '',
-  loginEdited: false,
-  pin: '',
-  teenId: null,
-  interests: [],
-  goal: 2,
-  nickname: ''
-};
+const emptyDraft = { dob: '', teenName: '', consent: defaultConsent, quietHours: true, joinCode: '', interests: [], goal: 2, nickname: '' };
 
 /**
- * Guardian-first onboarding. A teen can start, but nothing unlocks until a verified guardian consents.
- * mode="addTeen" is for a guardian who is already signed in: permissions, then the teen's profile.
+ * Everything before the main app: Google sign-in, picking a role, and the first-run steps.
+ * mode="addTeen" is a signed-in guardian adding a teen; "teenSetup" is a teen who just joined;
+ * "pending" is a mentor Stride hasn't approved yet.
  */
 export default function Onboarding({ mode }) {
-  const { state, set } = useStore();
-  const { api, user } = useBackend();
-  const adding = mode === 'addTeen';
-  const invite = adding ? null : state.pendingInvite;
-  const [draft, setDraft] = useState(() =>
-    invite ? { ...emptyDraft, teenName: invite.teenName, dob: invite.dob, nickname: invite.teenName, login: suggestLogin(invite.teenName) } : emptyDraft
-  );
-  const [history, setHistory] = useState([adding ? 'consent' : invite ? 'waiting' : 'welcome']);
+  const { set } = useStore();
+  const { api, user, identity } = useBackend();
+  const [draft, setDraft] = useState(() => ({ ...emptyDraft, ...(user?.role === 'teen' ? { teenName: user.name, nickname: user.nickname || user.name } : {}) }));
+  const first = mode === 'addTeen' ? 'consent' : mode === 'teenSetup' ? 'teenSetup' : mode === 'pending' ? 'pending' : identity ? 'role' : 'welcome';
+  const [history, setHistory] = useState([first]);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const step = history[history.length - 1];
@@ -54,122 +32,82 @@ export default function Onboarding({ mode }) {
   };
   const back = () => {
     setError(null);
-    if (adding && history.length === 1) {
+    if (mode === 'addTeen' && history.length === 1) {
       set({ setup: null });
       window.location.hash = '#/guardian';
       return;
     }
     setHistory((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
   };
-  const restart = () => {
-    set({ pendingInvite: null });
-    setDraft(emptyDraft);
-    setHistory(['welcome']);
-  };
-  const leave = (route) => {
-    window.location.hash = route;
-    set({ setup: null, pendingInvite: null });
-  };
 
-  // Creates the guardian (unless one is signed in) and the teen. `setup` keeps this screen up
-  // while the session changes underneath it.
-  const activate = async () => {
+  // Runs a backend call with the busy flag and an inline error; true when it worked.
+  const run = async (work) => {
     setBusy(true);
     setError(null);
-    set({ setup: { mode: mode || 'new' } });
-    const message = await attempt(
-      (async () => {
-        if (!user || user.role !== 'guardian') {
-          await api.registerGuardian({
-            name: draft.guardianName,
-            contact: draft.guardianContact,
-            relation: draft.relation,
-            password: draft.password,
-            verifiedBy: draft.method,
-            verifiedAt: draft.verifiedAt
-          });
-        }
-        const teenId = await api.createTeen({
-          name: draft.teenName,
-          dob: draft.dob,
-          login: draft.login,
-          pin: draft.pin,
-          consent: draft.consent,
-          quietHours: draft.quietHours
-        });
-        update({ teenId, nickname: draft.nickname || draft.teenName.trim() });
-      })()
-    );
-    setBusy(false);
-    if (message) {
-      setError(message);
-      return;
-    }
-    set({ pendingInvite: null });
-    setHistory(['activated']);
-  };
-
-  const handOver = async () => {
-    const message = await attempt(api.handOver(draft.teenId));
-    if (message) setError(message);
-    else go('teenSetup');
-  };
-
-  const finishTeen = async () => {
-    setBusy(true);
-    const message = await attempt(api.updateTeenProfile({ nickname: draft.nickname, interests: draft.interests, goal: draft.goal }));
+    const message = await attempt(work());
     setBusy(false);
     if (message) setError(message);
-    else leave('#/today');
+    return !message;
   };
 
-  const props = { draft, update, go, back };
+  const props = { draft, update, back };
+  const shared = { busy, error };
 
   switch (step) {
-    case 'signIn':
-    case 'signIn:teen':
-    case 'signIn:guardian':
-    case 'signIn:mentor':
-      return <SignIn key={step} back={back} go={go} role={step.split(':')[1] || 'teen'} />;
-    case 'age':
-      return <AgeCheck {...props} />;
-    case 'young':
-      return <TooYoung back={back} restart={restart} />;
-    case 'adult':
-      return <Adult back={back} go={go} />;
-    case 'invite':
+    case 'role':
+      return <RoleChoice identity={identity} go={go} onSignOut={() => api.signOut()} />;
+    case 'guardian':
+      return <GuardianForm identity={identity} back={back} {...shared} onSubmit={(f) => run(() => api.registerGuardian(f)).then((ok) => ok && (window.location.hash = '#/guardian'))} />;
+    case 'mentor':
+      return <MentorForm identity={identity} back={back} {...shared} onSubmit={(f) => run(() => api.registerMentor(f))} />;
+    case 'teen':
+      return <JoinForm back={back} {...shared} onSubmit={async (code) => {
+        // `setup` keeps this screen up while the signed-in user changes underneath it.
+        set({ setup: { mode: 'teenSetup' } });
+        if (await run(() => api.joinWithCode(code))) setHistory(['teenSetup']);
+        else set({ setup: null });
+      }} />;
+    case 'pending':
+      return <Pending user={user} onSignOut={() => api.signOut()} />;
+    case 'consent':
+      return <ConsentStep {...props} onAgree={() => go('child')} />;
+    case 'child':
       return (
-        <InviteGuardian
+        <ChildProfile
           {...props}
-          onSend={() => {
-            set({
-              pendingInvite: {
-                teenName: draft.teenName.trim(),
-                dob: draft.dob,
-                contact: draft.inviteContact.trim(),
-                sentAt: new Date().toISOString()
-              }
+          {...shared}
+          onActivate={async () => {
+            let id;
+            const ok = await run(async () => {
+              id = await api.createTeen({ name: draft.teenName, dob: draft.dob, consent: draft.consent, quietHours: draft.quietHours });
             });
-            update({ nickname: draft.teenName.trim(), login: suggestLogin(draft.teenName) });
-            setHistory(['waiting']);
+            if (!ok) return;
+            const snap = await api.refresh();
+            update({ joinCode: snap.db.users[id]?.joinCode || '' });
+            setHistory(['activated']);
           }}
         />
       );
-    case 'waiting':
-      return <Waiting invite={state.pendingInvite} onOpenInvite={() => go('account')} onCancel={restart} />;
-    case 'account':
-      return <GuardianAccount {...props} invite={invite} />;
-    case 'verify':
-      return <VerifyGuardian {...props} />;
-    case 'consent':
-      return <ConsentStep {...props} step={adding ? 1 : 3} total={adding ? 2 : 4} onAgree={() => go('child')} />;
-    case 'child':
-      return <ChildProfile {...props} step={adding ? 2 : 4} total={adding ? 2 : 4} onActivate={activate} error={error} busy={busy} />;
     case 'activated':
-      return <Activated draft={draft} error={error} onHandOver={handOver} onDashboard={() => leave('#/guardian')} />;
-    case 'teenSetup':
-      return <TeenSetup draft={draft} update={update} onDone={finishTeen} error={error} busy={busy} />;
+      return <Activated draft={draft} onDashboard={() => { set({ setup: null }); window.location.hash = '#/guardian'; }} />;
+    case 'teenSetup': {
+      // A teen who just joined has a profile now, but this draft was made before it existed.
+      const filled = { ...draft, teenName: draft.teenName || user?.name || '', nickname: draft.nickname || user?.nickname || '' };
+      return (
+        <TeenSetup
+          draft={filled}
+          update={update}
+          {...shared}
+          onDone={async () => {
+            if (await run(() => api.updateTeenProfile({ nickname: filled.nickname, interests: draft.interests, goal: draft.goal }))) {
+              set({ setup: null });
+              window.location.hash = '#/today';
+            }
+          }}
+        />
+      );
+    }
     default:
-      return <Welcome go={go} />;
+      return <Welcome />;
   }
 }

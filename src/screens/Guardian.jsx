@@ -7,7 +7,6 @@ import FieldError from '../components/FieldError.jsx';
 import WeekPlan from '../components/WeekPlan.jsx';
 import { useStore } from '../store.jsx';
 import { attempt, useBackend } from '../api/index.jsx';
-import { clubParents } from '../data.js';
 import {
   attendanceFor, badgesFor, clubIdsOf, requestsFor, selectedTeen, sessionsThisWeek, tasksFor, teensOf, thread, threads
 } from '../api/selectors.js';
@@ -97,8 +96,6 @@ export default function Guardian() {
   const requests = requestsFor(db, kid.id).filter((r) => r.status === 'pending' || (r.decidedAt && now - new Date(r.decidedAt) < 7 * 86400000));
   const waitingTasks = tasksFor(db, kid.id).filter((t) => t.status === 'submitted' && db.lessons[t.lessonId]);
   const recentBadges = badgesFor(db, kid.id).slice(0, 3);
-  const clubIds = clubIdsOf(db, kid.id).filter((id) => clubParents[id]);
-  const toggleGroup = (id) => set((prev) => ({ parentGroups: { ...prev.parentGroups, [id]: !prev.parentGroups[id] } }));
   const pendingCount = requestsFor(db, kid.id).filter((r) => r.status === 'pending').length;
 
   return (
@@ -229,81 +226,6 @@ export default function Guardian() {
           <p className="row-meta empty">Nothing confirmed yet this week.</p>
         )}
       </section>
-
-      {clubIds.length > 0 && (
-        <>
-          <SectionHead title="Other parents at these clubs" />
-          <section className="panel panel-list" aria-label="Other parents">
-            {clubIds.map((id) => {
-              const club = db.clubs[id];
-              const parents = clubParents[id];
-              const joined = !!state.parentGroups[id];
-              return (
-                <div className="parents-line" key={id}>
-                  <span className="faces" aria-hidden="true">
-                    {parents.names.map((name) => (
-                      <span key={name} className="face">
-                        {initials(name)}
-                      </span>
-                    ))}
-                    <span className="face face-more">+{parents.count - parents.names.length}</span>
-                  </span>
-                  <span className="stack-2 grow">
-                    <span className="row-title">{club.name}</span>
-                    <span className="row-meta">
-                      {parents.names.join(', ')} and {parents.count - parents.names.length} other families
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    className={joined ? 'chip is-on' : 'chip'}
-                    aria-pressed={joined}
-                    aria-label={joined ? `Leave the ${club.name} parents' WhatsApp group` : `Join the ${club.name} parents' WhatsApp group`}
-                    onClick={() => toggleGroup(id)}
-                  >
-                    {joined ? 'Joined' : 'Join group'}
-                  </button>
-                </div>
-              );
-            })}
-          </section>
-          <p className="fine fine-left">Parents who know each other keep a closer eye out. Groups run on WhatsApp and the club leader is in each one.</p>
-        </>
-      )}
-
-      {kid.consent.summary ? (
-        <>
-          <SectionHead title="Weekly summary on WhatsApp" />
-          <div className="summary-preview" aria-label="Summary preview">
-            <p>
-              <strong>Stride · {kid.name}'s week</strong>
-            </p>
-            <p>
-              {confirmed} of {goal} sessions confirmed by club leaders.
-            </p>
-            {pendingCount > 0 && (
-              <p>
-                {pendingCount} club {pendingCount === 1 ? 'request is' : 'requests are'} waiting for you.
-              </p>
-            )}
-            {recentBadges[0] && <p>Latest badge: {recentBadges[0].name}.</p>}
-            <p>
-              {mentorMessages} {mentorMessages === 1 ? 'message' : 'messages'} from a mentor.
-            </p>
-            <span className="bubble-time">Sundays, 6 pm</span>
-          </div>
-          {!state.summarySent ? (
-            <button type="button" className="btn btn-ghost" onClick={() => set({ summarySent: true })}>
-              <Icon name="send" size={18} strokeWidth={1.6} />
-              Send it now
-            </button>
-          ) : (
-            <Status>Weekly summary sent on WhatsApp.</Status>
-          )}
-        </>
-      ) : (
-        <p className="fine fine-left">The weekly WhatsApp summary is off. Turn it on in Controls.</p>
-      )}
     </main>
   );
 }

@@ -7,7 +7,7 @@ import Toggle from '../components/Toggle.jsx';
 import FieldError from '../components/FieldError.jsx';
 import { useStore } from '../store.jsx';
 import { attempt, useBackend } from '../api/index.jsx';
-import { consentItems, formatWhen, verifyMethods } from '../onboarding.js';
+import { consentItems, formatWhen } from '../onboarding.js';
 import { attendanceFor, badgesFor, requestsFor, selectedTeen, teensOf, threads, thread } from '../api/selectors.js';
 
 function downloadJson(filename, data) {
@@ -23,12 +23,9 @@ export default function GuardianControls() {
   const { state, set } = useStore();
   const { db, user: guardian, api } = useBackend();
   const [deleting, setDeleting] = useState(false);
-  const [pin, setPin] = useState('');
-  const [pinDone, setPinDone] = useState(false);
   const [error, setError] = useState(null);
   const teens = teensOf(db, guardian.id);
   const kid = selectedTeen(db, guardian.id, state.child);
-  const method = verifyMethods.find((m) => m.id === guardian.verifiedBy);
 
   if (!kid) {
     return (
@@ -42,21 +39,14 @@ export default function GuardianControls() {
   const run = async (promise) => setError(await attempt(promise));
   const setItem = (item, on) =>
     run(api.setConsent(kid.id, { [item.id]: on, ...(item.id === 'mentor' && !on ? { messages: false } : {}) }, `${on ? 'Turned on' : 'Turned off'}: ${item.title}`));
-  const resetPin = async () => {
-    const message = await attempt(api.resetTeenPin(kid.id, pin));
-    setError(message);
-    if (!message) {
-      setPin('');
-      setPinDone(true);
-    }
-  };
+  const newCode = async () => setError(await attempt(api.newJoinCode(kid.id)));
 
   const download = () => {
-    const { secret, ...teen } = kid;
-    downloadJson(`stride-${kid.login}-data.json`, {
+    const { joinCode, ...teen } = kid;
+    downloadJson(`stride-${kid.name.toLowerCase()}-data.json`, {
       exportedAt: new Date().toISOString(),
       teen,
-      guardian: { name: guardian.name, contact: guardian.contact, relation: guardian.relation, verifiedBy: guardian.verifiedBy, verifiedAt: guardian.verifiedAt },
+      guardian: { name: guardian.name, email: guardian.email, relation: guardian.relation },
       requests: requestsFor(db, kid.id),
       attendance: attendanceFor(db, kid.id),
       badges: badgesFor(db, kid.id),
@@ -88,7 +78,6 @@ export default function GuardianControls() {
               aria-pressed={t.id === kid.id}
               onClick={() => {
                 set({ child: t.id });
-                setPinDone(false);
                 setError(null);
               }}
             >
@@ -157,32 +146,17 @@ export default function GuardianControls() {
 
       <SectionHead title="Signing in" />
       <section className="panel stack-12" aria-label="Signing in">
-        <p className="body-muted">
-          {kid.name} signs in as <strong>{kid.login}</strong> with a 4-digit PIN.
-        </p>
-        <div className="row-8">
-          <label className="visually-hidden" htmlFor="new-pin">
-            New PIN
-          </label>
-          <input
-            id="new-pin"
-            className="input pin-field"
-            type="password"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={4}
-            placeholder="PIN"
-            value={pin}
-            onChange={(e) => {
-              setPin(e.target.value.replace(/\D/g, '').slice(0, 4));
-              setPinDone(false);
-            }}
-          />
-          <button type="button" className="btn btn-ghost grow" disabled={pin.length !== 4} onClick={resetPin}>
-            Reset PIN
-          </button>
-        </div>
-        {pinDone && <Status>New PIN saved. Tell {kid.name} the new one.</Status>}
+        {kid.joinCode ? (
+          <>
+            <p className="body-muted">{kid.name} hasn't joined yet. Give them this code to enter after signing in with Google.</p>
+            <output className="join-code-value">{kid.joinCode}</output>
+            <button type="button" className="btn btn-ghost" onClick={newCode}>
+              Make a new code
+            </button>
+          </>
+        ) : (
+          <p className="body-muted">{kid.name} signs in with their own Google account.</p>
+        )}
       </section>
 
       <SectionHead title="Consent history" />
@@ -205,11 +179,6 @@ export default function GuardianControls() {
           ))
         )}
       </section>
-      {method && guardian.verifiedAt && (
-        <p className="fine fine-left">
-          Identity checked by {method.title.toLowerCase()} on {formatWhen(guardian.verifiedAt)}.
-        </p>
-      )}
 
       <SectionHead title="Data" />
       <button type="button" className="btn btn-ghost" onClick={download}>

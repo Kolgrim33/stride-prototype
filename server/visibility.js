@@ -12,7 +12,9 @@ const teenForMentor = (u) => ({
   name: u.nickname,
   consent: { mentor: !!u.consent?.mentor, messages: !!u.consent?.messages }
 });
-const withoutSecret = ({ secret, ...rest }) => rest;
+// The Firebase uid never leaves the server.
+const withoutSecret = ({ uid, ...rest }) => rest;
+const publicClub = ({ leaderEmail, ...rest }) => rest;
 
 function reachableTeens(db, mentorId) {
   const ids = new Set();
@@ -27,14 +29,15 @@ function reachableTeens(db, mentorId) {
 export function visibleTo(db, userId) {
   const out = emptyDb();
   out.version = db.version;
-  out.mentors = db.mentors;
-  out.clubs = db.clubs;
-  out.lessons = db.lessons;
   const user = userId ? db.users[userId] : null;
+  // Only mentors Stride has approved are public. A mentor still waiting sees their own profile.
+  for (const m of values(db.mentors)) if (db.users[m.userId]?.approved || m.userId === user?.id) out.mentors[m.id] = m;
+  for (const club of values(db.clubs)) out.clubs[club.id] = publicClub(club);
+  for (const lesson of values(db.lessons)) if (out.mentors[lesson.mentorId]) out.lessons[lesson.id] = lesson;
   if (!user) return out;
 
   // Mentor accounts are public enough to show a name.
-  for (const u of values(db.users)) if (u.role === 'mentor') out.users[u.id] = publicUser(u);
+  for (const u of values(db.users)) if (u.role === 'mentor' && out.mentors[u.mentorId]) out.users[u.id] = publicUser(u);
   out.users[user.id] = withoutSecret(user);
 
   let teenIds;
@@ -42,6 +45,7 @@ export function visibleTo(db, userId) {
     teenIds = new Set([user.id]);
     const guardian = db.users[user.guardianId];
     if (guardian) out.users[guardian.id] = pick(guardian, ['id', 'role', 'name', 'relation']);
+    delete out.users[user.id].joinCode;
   } else if (user.role === 'guardian') {
     teenIds = new Set(values(db.users).filter((u) => u.guardianId === user.id).map((u) => u.id));
     for (const id of teenIds) out.users[id] = withoutSecret(db.users[id]);

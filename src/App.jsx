@@ -86,7 +86,7 @@ function Loading({ error, onRetry }) {
 }
 
 function Screens() {
-  const { db, user, ready, error, api } = useBackend();
+  const { db, user, identity, ready, error, api } = useBackend();
   const { state } = useStore();
   const [parts, setParts] = useState(parseHash);
 
@@ -101,10 +101,12 @@ function Screens() {
 
   if (!ready || !db) return <Loading error={error} onRetry={() => api.refresh()} />;
 
-  if (!user || state.setup) {
+  // Signed out, signed in with Google but no role yet, or a profile that isn't finished.
+  const unfinished = user?.role === 'mentor' ? !user.approved && 'pending' : user?.role === 'teen' && user.interests.length === 0 && 'teenSetup';
+  if (!user || unfinished || state.setup) {
     return (
       <div className="app">
-        <Onboarding mode={state.setup?.mode} />
+        <Onboarding key={unfinished || state.setup?.mode || (identity ? 'identity' : 'start')} mode={unfinished || state.setup?.mode} />
       </div>
     );
   }

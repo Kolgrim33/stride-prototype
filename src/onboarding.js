@@ -34,20 +34,11 @@ export const consentItems = [
     id: 'record',
     title: 'Share the growth record',
     detail: (name) => `${name} can share confirmed sessions and badges with a school.`
-  },
-  {
-    id: 'summary',
-    title: 'Weekly summary on WhatsApp',
-    detail: () => 'One short message to you each week with sessions and requests.'
   }
 ];
 
-export const defaultConsent = { account: true, clubs: true, mentor: true, messages: true, record: false, summary: true };
+export const defaultConsent = { account: true, clubs: true, mentor: true, messages: true, record: false };
 
-export const verifyMethods = [
-  { id: 'id', title: 'ID and a selfie', detail: 'National ID or passport, then a quick selfie. About 2 minutes.' },
-  { id: 'card', title: 'Card check', detail: 'A $0.50 hold on a bank or mobile money card, refunded straight away.' }
-];
 
 export const relations = ['Mother', 'Father', 'Grandparent', 'Aunt or uncle', 'Legal guardian', 'Other'];
 

@@ -18,29 +18,40 @@ const check = (condition, message, status) => {
   if (!condition) throw new ApiError(message, status);
 };
 
-const LOGIN_RE = /^[a-z0-9_.]{3,20}$/;
-const PIN_RE = /^\d{4}$/;
 const categoryIds = categories.map((c) => c.id);
 
 export const methodNames = [
-  'signIn', 'signOut', 'registerGuardian', 'createTeen', 'handOver', 'updateTeenProfile', 'setTeenLimits',
-  'setConsent', 'resetTeenPin', 'deleteTeen', 'requestClub', 'cancelRequest', 'decideRequest', 'setAttendance',
+  'registerGuardian', 'registerMentor', 'createTeen', 'joinWithCode', 'newJoinCode', 'updateTeenProfile', 'setTeenLimits',
+  'setConsent', 'deleteTeen', 'requestClub', 'cancelRequest', 'decideRequest', 'setAttendance',
   'saveSteps', 'submitTask', 'withdrawTask', 'reviewTask', 'saveLesson', 'deleteLesson', 'sendMessage',
   'markThreadRead', 'fileReport'
 ];
 
 const values = (collection) => Object.values(collection || {});
-const loginTaken = (db, login) => values(db.users).some((u) => u.login === login);
+const initialsOf = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+const JOIN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I, so a code read aloud isn't misheard
 
-// Career interest -> Charlene, Study without Tech -> Eric, everyone else -> Fabulous.
-export function matchMentor(interests = []) {
-  if (interests.includes('Career')) return 'charlene';
-  if (interests.includes('Study') && !interests.includes('Tech')) return 'eric';
-  return 'fabulous';
+function newJoinCode(db) {
+  const taken = new Set(values(db.users).map((u) => u.joinCode).filter(Boolean));
+  for (;;) {
+    const bytes = globalThis.crypto.getRandomValues(new Uint8Array(6));
+    const code = Array.from(bytes, (b) => JOIN_ALPHABET[b % JOIN_ALPHABET.length]).join('');
+    if (!taken.has(code)) return code;
+  }
 }
 
-function autoMatch(teen) {
-  if (!teen.mentorId && teen.consent.mentor && teen.interests.length > 0) teen.mentorId = matchMentor(teen.interests);
+// A mentor who leads a club in one of the teen's interests; failing that, the approved mentor
+// with the fewest mentees. Nobody is matched until at least one mentor is approved.
+export function matchMentor(db, interests = []) {
+  const approved = values(db.mentors).filter((m) => db.users[m.userId]?.approved);
+  const leads = approved.find((m) => values(db.clubs).some((c) => c.mentorId === m.id && interests.includes(c.type)));
+  if (leads) return leads.id;
+  const load = (m) => values(db.users).filter((u) => u.mentorId === m.id).length;
+  return approved.sort((x, y) => load(x) - load(y))[0]?.id || null;
+}
+
+function autoMatch(db, teen) {
+  if (!teen.mentorId && teen.consent.mentor && teen.interests.length > 0) teen.mentorId = matchMentor(db, teen.interests);
 }
 
 function normaliseConsent(consent) {
@@ -71,50 +82,52 @@ export function mentorCanReach(db, mentorId, teen) {
 }
 
 const methods = {
-  signIn(db, c, { login, secret } = {}) {
-    const key = String(login || '').trim().toLowerCase();
-    const user = values(db.users).find((u) => u.login === key);
-    check(user && c.verify(String(secret || ''), user.secret), "That username and PIN or password don't match.", 401);
-    c.signInAs(user.id);
-    return user.id;
-  },
-
-  signOut(db, c) {
-    c.signInAs(null);
-    return null;
-  },
-
-  registerGuardian(db, c, { name, contact, relation, password, verifiedBy, verifiedAt } = {}) {
+  registerGuardian(db, c, { name, relation } = {}) {
+    const who = c.requireIdentity();
     const cleanName = String(name || '').trim();
-    const login = String(contact || '').trim().toLowerCase();
     check(cleanName, 'Add your name.', 400);
-    check(login, 'Add a phone number or email.', 400);
-    check(String(password || '').length >= 6, 'Use a password with 6 or more characters.', 400);
-    check(!loginTaken(db, login), 'That phone number or email already has an account. Sign in instead.', 409);
     const id = c.id('g');
     db.users[id] = {
-      id, role: 'guardian', login, secret: c.hash(password), name: cleanName, createdAt: c.nowIso,
-      contact: String(contact).trim(), relation: relation || '', verifiedBy: verifiedBy || null, verifiedAt: verifiedAt || null
+      id, uid: who.uid, role: 'guardian', name: cleanName, email: who.email || null, createdAt: c.nowIso,
+      relation: String(relation || '').trim()
     };
-    c.signInAs(id);
     return id;
   },
 
-  createTeen(db, c, { name, dob, login, pin, consent, quietHours = true } = {}) {
+  registerMentor(db, c, { name, role, bio } = {}) {
+    const who = c.requireIdentity();
+    const cleanName = String(name || '').trim();
+    check(cleanName, 'Add your name.', 400);
+    check(String(role || '').trim(), 'Say what you do, for example "Coach at Chess Club".', 400);
+    const [first, ...rest] = cleanName.split(/\s+/);
+    const mentorId = c.id('m');
+    const userId = c.id('u');
+    db.users[userId] = {
+      id: userId, uid: who.uid, role: 'mentor', name: cleanName, email: who.email || null, createdAt: c.nowIso,
+      mentorId, approved: false
+    };
+    db.mentors[mentorId] = {
+      id: mentorId, userId, name: cleanName, first, short: rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first,
+      initials: initialsOf(cleanName), role: String(role).trim().slice(0, 80), bio: String(bio || '').trim().slice(0, 600)
+    };
+    // A club created for this person's email becomes theirs the moment they sign up.
+    for (const club of values(db.clubs)) {
+      if (club.leaderEmail && who.email && club.leaderEmail.toLowerCase() === who.email.toLowerCase()) club.mentorId = mentorId;
+    }
+    return userId;
+  },
+
+  createTeen(db, c, { name, dob, consent, quietHours = true } = {}) {
     const guardian = c.requireRole('guardian');
     const cleanName = String(name || '').trim();
-    const cleanLogin = String(login || '').trim().toLowerCase();
     const age = ageFrom(dob, c.now);
     check(cleanName, 'Add their first name.', 400);
     check(age !== null && age >= MIN_AGE && age <= MAX_AGE, `Stride teen accounts are for ${MIN_AGE} to ${MAX_AGE} year olds.`, 400);
-    check(LOGIN_RE.test(cleanLogin), 'Usernames are 3 to 20 letters, numbers, dots or underscores.', 400);
-    check(!loginTaken(db, cleanLogin), 'That username is taken. Try another.', 409);
-    check(PIN_RE.test(String(pin || '')), 'The PIN must be 4 digits.', 400);
     const choices = normaliseConsent(consent);
     const id = c.id('t');
     const count = values(db.users).filter((u) => u.guardianId === guardian.id).length;
     db.users[id] = {
-      id, role: 'teen', login: cleanLogin, secret: c.hash(String(pin)), name: cleanName, createdAt: c.nowIso,
+      id, uid: null, joinCode: newJoinCode(db), role: 'teen', name: cleanName, createdAt: c.nowIso,
       surname: guardian.name.split(' ').slice(1).join(' '), nickname: cleanName, dob, guardianId: guardian.id, mentorId: null,
       color: teenColors[count % teenColors.length], interests: [], goal: 2, routine: { Sun: { label: 'Family', icon: 'home' } },
       paused: false, quietHours: !!quietHours, consent: choices,
@@ -123,10 +136,22 @@ const methods = {
     return id;
   },
 
-  handOver(db, c, teenId) {
-    c.requireGuardianOf(teenId);
-    c.signInAs(teenId);
-    return teenId;
+  // The teen signs in with their own Google account, then types the code their guardian gave them.
+  joinWithCode(db, c, code) {
+    const who = c.requireIdentity();
+    const clean = String(code || '').trim().toUpperCase().replace(/[\s-]/g, '');
+    const teen = values(db.users).find((u) => u.role === 'teen' && u.joinCode && u.joinCode === clean);
+    check(teen, "That code doesn't match. Ask your guardian to check it.", 404);
+    teen.uid = who.uid;
+    teen.joinCode = null;
+    return teen.id;
+  },
+
+  newJoinCode(db, c, teenId) {
+    const { teen } = c.requireGuardianOf(teenId);
+    check(!teen.uid, `${teen.nickname} has already joined.`, 409);
+    teen.joinCode = newJoinCode(db);
+    return teen.joinCode;
   },
 
   updateTeenProfile(db, c, { nickname, interests, goal } = {}) {
@@ -141,7 +166,7 @@ const methods = {
       check([1, 2, 3].includes(Number(goal)), 'Pick 1, 2 or 3 sessions a week.', 400);
       teen.goal = Number(goal);
     }
-    autoMatch(teen);
+    autoMatch(db, teen);
     return teen.id;
   },
 
@@ -166,14 +191,7 @@ const methods = {
     const { guardian, teen } = c.requireGuardianOf(teenId);
     teen.consent = normaliseConsent({ ...teen.consent, ...consent });
     teen.consentLog.push({ at: c.nowIso, by: guardian.name, version: POLICY_VERSION, choices: teen.consent, note: note || 'Changed permissions' });
-    autoMatch(teen);
-    return teen.id;
-  },
-
-  resetTeenPin(db, c, teenId, pin) {
-    const { teen } = c.requireGuardianOf(teenId);
-    check(PIN_RE.test(String(pin || '')), 'The PIN must be 4 digits.', 400);
-    teen.secret = c.hash(String(pin));
+    autoMatch(db, teen);
     return teen.id;
   },
 
@@ -403,29 +421,28 @@ function randomId(prefix) {
 
 /**
  * Runs one method against `db`, changing it in place. Callers pass a copy and save it afterwards.
- * @returns {{ value: any, session: undefined | null | { userId: string } }}
- *   `session` is undefined when the signed-in user does not change.
+ * `identity` is the verified Google account ({ uid, email }) or null. The signed-in user is whoever owns that uid.
  */
-export function applyMethod(db, method, args, { userId, now = new Date(), hash, verify, id = randomId }) {
+export function applyMethod(db, method, args, { identity = null, now = new Date(), id = randomId }) {
   const run = methods[method];
   check(run, `Unknown action: ${method}`, 400);
-  let session;
-  const user = userId ? db.users[userId] : null;
+  const user = identity ? values(db.users).find((u) => u.uid === identity.uid) || null : null;
   const c = {
     now,
     nowIso: now.toISOString(),
-    hash,
-    verify,
     id,
-    signInAs(next) {
-      session = next ? { userId: next } : null;
+    requireIdentity() {
+      check(identity, 'Sign in with Google first.', 401);
+      check(!user, 'This Google account already has a Stride profile.', 409);
+      return identity;
     },
     requireUser() {
       check(user, 'Please sign in first.', 401);
+      check(user.role !== 'mentor' || user.approved, 'Stride is still checking your mentor account. We will email you when it is approved.');
       return user;
     },
     requireRole(role) {
-      check(user, 'Please sign in first.', 401);
+      c.requireUser();
       check(user.role === role, `Only a ${role} can do that.`);
       return user;
     },
@@ -437,5 +454,5 @@ export function applyMethod(db, method, args, { userId, now = new Date(), hash, 
     }
   };
   const value = run(db, c, ...(Array.isArray(args) ? args : [args]));
-  return { value, session };
+  return { value };
 }

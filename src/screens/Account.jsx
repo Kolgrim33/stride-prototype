@@ -6,7 +6,7 @@ import FieldError from '../components/FieldError.jsx';
 import MeDot from '../components/MeDot.jsx';
 import MentorAvatar from '../components/MentorAvatar.jsx';
 import { useStore } from '../store.jsx';
-import { attempt, backendKind, useBackend } from '../api/index.jsx';
+import { attempt, useBackend } from '../api/index.jsx';
 import { consentItems } from '../onboarding.js';
 import { teensOf } from '../api/selectors.js';
 
@@ -16,7 +16,6 @@ const homeOf = { teen: '#/today', guardian: '#/guardian', mentor: '#/dashboard' 
 export default function Account() {
   const { set } = useStore();
   const { db, user, api } = useBackend();
-  const [confirmReset, setConfirmReset] = useState(false);
   const [error, setError] = useState(null);
   const guardian = user.role === 'teen' ? db.users[user.guardianId] : null;
   const lastChange = user.role === 'teen' ? user.consentLog?.at(-1) : null;
@@ -29,16 +28,6 @@ export default function Account() {
       window.location.hash = '#/';
     }
   };
-  const reset = async () => {
-    const message = await attempt(api.resetDemo());
-    setConfirmReset(false);
-    if (message) setError(message);
-    else {
-      set({ child: null, setup: null, skipped: {} });
-      window.location.hash = '#/';
-    }
-  };
-
   return (
     <main className="page">
       {user.role === 'guardian' ? (
@@ -62,7 +51,7 @@ export default function Account() {
         <span className="stack-4 grow min-0">
           <span className="profile-name">{user.role === 'teen' ? user.nickname : user.name}</span>
           <span className="row-meta">
-            {roleName[user.role]} · signs in as {user.login}
+            {roleName[user.role]}{user.email ? ` · ${user.email}` : ''}
           </span>
         </span>
       </section>
@@ -100,7 +89,7 @@ export default function Account() {
                 <MeDot person={t} />
                 <span className="stack-2 grow">
                   <span className="row-title">{t.name}</span>
-                  <span className="row-meta">Signs in as {t.login}{t.paused ? ' · paused' : ''}</span>
+                  <span className="row-meta">{t.uid === undefined && t.joinCode ? `Code ${t.joinCode}` : 'Joined'}{t.paused ? ' · paused' : ''}</span>
                 </span>
                 <Icon name="arrowRight" size={16} strokeWidth={1.8} color="var(--subtle)" />
               </a>
@@ -128,25 +117,6 @@ export default function Account() {
         Sign out
       </button>
 
-      {!confirmReset ? (
-        <button type="button" className="link-btn" onClick={() => setConfirmReset(true)}>
-          Reset demo data
-        </button>
-      ) : (
-        <section className="panel stack-12" aria-label="Reset demo data">
-          <p className="body">
-            Put every account back to the demo starting point? Anything made since is removed{backendKind === 'server' ? ' for everyone' : ' on this phone'}.
-          </p>
-          <div className="row-8">
-            <button type="button" className="btn btn-danger grow" onClick={reset}>
-              Reset
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setConfirmReset(false)}>
-              Cancel
-            </button>
-          </div>
-        </section>
-      )}
     </main>
   );
 }

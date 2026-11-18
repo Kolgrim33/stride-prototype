@@ -1,74 +1,58 @@
 # Data layer
 
-`src/api/` is the only code that touches data. Screens call `useBackend()` and get `{ db, session, user, api }`.
-
-There are two backends with the same interface:
-
-| Backend | When | Where the data lives | Who enforces the rules |
-| --- | --- | --- | --- |
-| Local (`local.js`) | `VITE_STRIDE_BACKEND` unset (the static demo) | This browser's localStorage (`stride-db`, `stride-session`) | `rules.js`, in the browser |
-| Server (`remote.js`) | `VITE_STRIDE_BACKEND=server` | Supabase Postgres, through `POST /api/rpc` | `rules.js`, on the server (`server/handler.js`) |
-
-Both run the same `rules.js`, so `local.test.js` is the spec for both. `server/handler.test.js` covers what only the server does: sessions, salted hashes, and sending each user only their own rows.
-
-## Files
+`src/api/` is the only code that touches data. Screens call `useBackend()` and get `{ db, session, identity, user, api }`.
 
 | File | What it does |
 | --- | --- |
-| `index.jsx` | Picks the backend; exports `BackendProvider`, `useBackend()` and `attempt()` |
-| `rules.js` | Every write and its access rules. Throws `ApiError` with a message a person can read |
-| `local.js` | `createLocalBackend({ storage, now })`: the database in localStorage |
-| `remote.js` | `createRemoteBackend()`: calls `/api/rpc`, keeps the session token, refreshes every 20 seconds |
-| `seed.js` | `createSeed(today, hash)`, `hashSecret()`, `demoLogins`, `DB_VERSION` |
+| `index.jsx` | `BackendProvider`, `useBackend()` and `attempt()` |
+| `remote.js` | Signs in with Google (`api.signInWithGoogle()`), attaches the Firebase ID token to every call, polls every 20 seconds |
+| `rules.js` | Every write and its access rules. Throws `ApiError` with a message a person can read. Runs on the server |
 | `selectors.js` | Pure read helpers over a snapshot |
+| `seed.js` | Collection names, `emptyDb()`, teen colours. There is no sample data |
 | `dates.js` | Calendar-day helpers. Weeks run Monday to Sunday |
-| `../../server/` | The server: `handler.js`, `visibility.js` (who may read what), `supabase-store.js`, `schema.js`, `passwords.js` |
-| `../../api/rpc.js` | The Vercel function that wraps `server/handler.js` |
-| `../../supabase/migrations/0001_stride.sql` | Tables, indexes and row level security |
+| `../../server/handler.js` | Verifies the token, runs one rule on a copy of the database, saves only the changed rows, returns the rows this person may see |
+| `../../server/visibility.js` | The read half of the access rules |
+| `../../server/firestore-store.js` | Firestore through the Admin SDK |
 
 ## How a call works
 
-1. A screen calls `api.requestClub('robotics')`.
-2. **Local:** `commit()` copies the database with `structuredClone`, runs the rule, saves, and notifies subscribers.
-   **Server:** `remote.js` posts `{ method, args }` with `Authorization: Bearer <token>`. The handler loads the database, runs the same rule on a copy, writes only the rows that changed, and replies with the rows this user may see.
-3. A broken rule throws `ApiError`. `attempt(promise)` turns it into a message the screen shows inline.
+1. A screen calls `api.requestClub('chess')`.
+2. `remote.js` posts `{ method, args }` to `/api/rpc` with `Authorization: Bearer <Google ID token>`.
+3. The server verifies the token, finds the user who owns that Google `uid`, and runs the rule from `rules.js` on a copy of the database. A broken rule throws `ApiError`; `attempt(promise)` turns it into a message the screen shows inline.
+4. Changed rows are written to Firestore. The reply is the signed-in person's slice of the database.
 
-## Roles
-
-- **Guardian** signs in with a phone number or email and a password. They create teen accounts, approve club requests, change permissions, and read (never send) messages.
-- **Teen** signs in with a username and a 4-digit PIN that their guardian set. They ask to join clubs, do lesson tasks and message mentors, within what their guardian allowed.
-- **Mentor** (club leaders too) signs in with the account Stride gave them. They confirm tasks, mark registers, publish lessons and message their teens. They see nicknames only.
+`server/handler.test.js` is the spec: sign-in, join codes, mentor approval and what each person can see.
 
 ## Schema
 
-Each collection is an object keyed by `id` in the browser, and a Postgres table on the server. `server/schema.js` maps camelCase fields to snake_case columns. Display-only fields go in each row's `extra` jsonb column.
+Each collection is an object keyed by `id` in the browser and a Firestore collection on the server.
 
 | Collection | Key fields |
 | --- | --- |
-| `users` | `role, login, secret, name`. Guardian: `contact, relation, verifiedBy, verifiedAt`. Teen: `surname, nickname, dob, guardianId, mentorId, color, interests, goal, routine, paused, quietHours, consent, consentLog`. Mentor: `mentorId` (their profile) |
-| `mentors` | public profile, `userId`, `listed` |
-| `clubs` | catalogue fields, `mentorId` (the leader), `cost`, `spots` |
-| `lessons` | catalogue fields, `mentorId`, `club`, `steps`, `badge`, `image`, `videoUrl`, `createdAt` |
+| `users` | `role, uid (server only), name, email`. Teen: `surname, nickname, dob, guardianId, mentorId, joinCode (until they join), color, interests, goal, routine, paused, quietHours, consent, consentLog`. Mentor: `mentorId, approved` |
+| `mentors` | public profile: `userId, name, first, short, initials, role, bio` |
+| `clubs` | catalogue fields, `mentorId` (the leader), `leaderEmail` (server only), `verified`, optional `cost` |
+| `lessons` | `mentorId, club, steps, badge, image, videoUrl, createdAt` |
 | `memberships` | `teenId, clubId, since, requestId` |
 | `requests` | `teenId, clubId, status (pending, approved, declined), createdAt, decidedAt, decidedBy` |
 | `attendance` | `teenId, clubId, date, confirmedBy, at` |
 | `tasks` | `teenId, lessonId, steps, status (draft, submitted, confirmed, returned), submittedAt, reviewedAt, reviewedBy, note` |
 | `badges` | `teenId, name, mentorId, clubId, lessonId, at` |
-| `messages` | `teenId, mentorId, from (teen or mentor; column "sender"), text, at, readAt` |
-| `reports` | `by (column "reporter_id"), role, teenId, mentorId, reason, text, at, status` |
-| `sessions` | server only: `token_hash, user_id, expires_at` |
+| `messages` | `teenId, mentorId, from (teen or mentor), text, at, readAt` |
+| `reports` | `by, role, teenId, mentorId, reason, text, at, status` |
 
-## Security on the server
+## Security
 
-- The browser never talks to Supabase. Only `/api/rpc` does, with the service role key, which never leaves the server.
-- Every table has row level security turned on with no policies, so the public anon key can read and write nothing.
-- Passwords and PINs are stored as salted scrypt hashes. Session tokens are random and stored as SHA-256 hashes.
-- `server/visibility.js` decides what each person receives. A guardian gets only their own family. A mentor gets their own threads, plus nickname-only rows for their mentees and club members. Secrets are never sent.
-- Reset demo data works only when `STRIDE_ALLOW_RESET=true`.
+- Browsers never reach Firestore: `firestore.rules` denies everything and only the server (Admin SDK) reads and writes.
+- The server trusts only a verified Firebase ID token. The Firebase `uid` never leaves the server.
+- `visibility.js` decides what each person receives: a guardian gets only their own family; a mentor gets their own threads and nickname-only rows for their mentees and club members; mentors who aren't approved are invisible to everyone else.
+- Mentors can't act until `approved` is true on their user document.
+- Join codes are single use and cleared when the teen joins.
 
-## Known limits of this version
+## Known limits
 
-- Each request reads every table, then writes only what changed. That's fine for a pilot with hundreds of families. For more, move each rule's reads to targeted queries (or Postgres functions), using `local.test.js` as the spec.
-- Writes to several tables aren't in one transaction. Two people changing the same row at the same moment means the last write wins.
-- Dates use the server's clock (UTC on Vercel). Close to midnight in Harare, "today" can still be yesterday.
-- New messages arrive by polling every 20 seconds. Supabase Realtime could push them instead.
+- Each request reads every collection, then writes only what changed. Fine for a pilot of hundreds of families; for more, move reads to targeted queries using `handler.test.js` as the spec.
+- Writes to several rows aren't one transaction, so two people editing the same row at the same moment means last write wins.
+- Dates use the server's clock (UTC). Close to midnight in Harare, "today" can still be yesterday.
+- New messages arrive by polling every 20 seconds.
+- Google accounts require users to be 13 or older (younger needs Family Link). Teen accounts here are 12 to 17, so a 12 year old needs a supervised Google account.

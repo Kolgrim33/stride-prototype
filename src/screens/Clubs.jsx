@@ -34,7 +34,7 @@ export default function Clubs() {
         <h1 className="h1">{isTeen ? 'Discover' : 'Clubs'}</h1>
         <div className="subline">
           <span>
-            <strong>{all.length} checked clubs</strong> near you
+            <strong>{all.length} {all.length === 1 ? 'club' : 'clubs'}</strong>
           </span>
           <span>This term</span>
         </div>

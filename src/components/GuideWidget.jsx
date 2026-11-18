@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { useBackend } from '../api/index.jsx';
+import { API_URL } from '../firebase.js';
 
-const URL = import.meta.env.VITE_ASSISTANT_URL || '/api/chat';
+const CHAT_URL = `${API_URL}/api/chat`;
 const starters = ['Which club suits me?', 'What should I learn this week?', 'How do I ask my guardian to approve a club?'];
 
 // Teens only: a floating AI guide in the bottom-right corner that knows the clubs and lessons on offer.
@@ -36,7 +37,7 @@ export default function GuideWidget() {
     setError(null);
     setBusy(true);
     try {
-      const res = await fetch(URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: next, context }) });
+      const res = await fetch(CHAT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: next, context }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.reply) throw new Error(data.error || 'The guide did not answer. Try again.');
       setTurns([...next, { role: 'assistant', content: data.reply }]);
@@ -56,7 +57,7 @@ export default function GuideWidget() {
       {open && (
         <section className="guide-panel" role="dialog" aria-label="Stride Guide">
           <header className="guide-head">
-            <Icon name="sparkles" size={18} strokeWidth={1.8} />
+            <Icon name="message" size={18} strokeWidth={1.8} />
             <span className="row-title grow">Stride Guide</span>
             <button type="button" className="guide-close" aria-label="Close guide" onClick={() => setOpen(false)}>
               <Icon name="x" size={18} strokeWidth={2} />
@@ -115,7 +116,7 @@ export default function GuideWidget() {
         </section>
       )}
       <button type="button" className="guide-fab" aria-label={open ? 'Close Stride Guide' : 'Ask Stride Guide'} aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Icon name={open ? 'x' : 'sparkles'} size={24} strokeWidth={1.8} />
+        <Icon name={open ? 'x' : 'message'} size={24} strokeWidth={1.8} />
       </button>
     </>
   );

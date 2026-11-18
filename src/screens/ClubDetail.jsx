@@ -6,7 +6,7 @@ import Status from '../components/Status.jsx';
 import FieldError from '../components/FieldError.jsx';
 import MentorAvatar from '../components/MentorAvatar.jsx';
 import { attempt, useBackend } from '../api/index.jsx';
-import { clubChecks, clubFriends } from '../data.js';
+import { clubChecks } from '../data.js';
 import { clubStatus, membersOf, requestFor, teensOf } from '../api/selectors.js';
 import { nextSessionDates } from '../api/dates.js';
 
@@ -57,8 +57,6 @@ function TeenAction({ club, db, teen, api }) {
 export default function ClubDetail({ club }) {
   const { db, user, api } = useBackend();
   const leader = db.mentors[club.mentorId];
-  const friends = clubFriends[club.id] || [];
-  const spots = club.spots;
   const family = user.role === 'guardian' ? membersOf(db, club.id).filter((t) => teensOf(db, user.id).some((k) => k.id === t.id)) : [];
 
   return (
@@ -66,11 +64,6 @@ export default function ClubDetail({ club }) {
       <main className="page">
         <NavBar title={club.type} back={backFor[user.role]} />
         <Cover type={club.type} size="lg" photo={club.id}>
-          {spots && (
-            <span className="over over-left">
-              <span className="tag tag-warn">{spots === 1 ? '1 place left' : `${spots} places left`}</span>
-            </span>
-          )}
         </Cover>
 
         <div className="stack-8">
@@ -86,15 +79,7 @@ export default function ClubDetail({ club }) {
             <span className="tag tag-green tag-inline">
               {family.map((t) => t.name).join(' & ')} already {family.length > 1 ? 'go' : 'goes'} here
             </span>
-          ) : (
-            user.role === 'teen' &&
-            friends.length > 0 && (
-              <span className="tag tag-keen tag-inline">
-                <HeartFill size={12} />
-                {friends.join(' & ')} {friends.length > 1 ? 'go' : 'goes'} here
-              </span>
-            )
-          )}
+          ) : null}
         </div>
 
         <p className="body">{club.about}</p>
@@ -110,6 +95,7 @@ export default function ClubDetail({ club }) {
           </a>
         )}
 
+        {club.verified && (
         <section className="panel" aria-label="Checked before joining Stride">
           <div className="panel-head">
             <h3 className="section-title">Checked before joining Stride</h3>
@@ -124,6 +110,7 @@ export default function ClubDetail({ club }) {
             ))}
           </ul>
         </section>
+        )}
 
         {club.cost && (
           <section className="cost" aria-label="Cost">

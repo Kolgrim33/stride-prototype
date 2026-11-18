@@ -16,15 +16,8 @@ function ProfileCard({ person }) {
       <span className="stack-4 grow min-0">
         <span className="profile-name name-verified">
           {person.name}
-          <span className="verified-tick" aria-hidden="true">
-            <Icon name="check" size={11} strokeWidth={3.4} />
-          </span>
         </span>
         <span className="row-meta">{person.role}</span>
-        <span className="tag tag-blue tag-inline">
-          <Icon name="shield" size={12} strokeWidth={2.4} />
-          {person.badge}
-        </span>
       </span>
       <Icon name="arrowRight" size={18} strokeWidth={2} color="var(--subtle)" />
     </a>
@@ -138,7 +131,7 @@ export default function Mentor() {
           <Icon name="clock" size={20} strokeWidth={1.6} />
           <p>
             {teen.consent.mentor
-              ? "We're matching you with a checked mentor. Pick what you're into in Account so we can find a good fit."
+              ? 'No mentor yet. You are matched as soon as Stride approves a mentor whose club fits what you picked.'
               : 'Your guardian has not turned on a mentor. They can do it in their Controls.'}
           </p>
         </section>

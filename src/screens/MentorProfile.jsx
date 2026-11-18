@@ -24,69 +24,23 @@ export default function MentorProfile({ person }) {
             {mentor.initials}
           </span>
         )}
-        <span className="mentor-badge">
-          <Icon name="shield" size={14} strokeWidth={2.4} />
-          {mentor.badge}
-        </span>
       </section>
 
       <div className="stack-6 center">
-        <h1 className="h1 h1-profile name-verified">
-          {mentor.name}
-          <span className="verified-tick" aria-label="Verified">
-            <Icon name="check" size={13} strokeWidth={3.4} />
-          </span>
-        </h1>
-        <span className="row-meta">
-          {mentor.role} · {mentor.since}
+        <h1 className="h1 h1-profile">{mentor.name}</h1>
+        <span className="row-meta">{mentor.role}</span>
+        <span className="mentor-badge">
+          <Icon name="shield" size={14} strokeWidth={2.4} />
+          Approved by Stride
         </span>
       </div>
 
-      <div className="mentor-stats">
-        {mentor.stats.map((s) => (
-          <div key={s.label}>
-            <strong className={s.value.length > 3 ? 'num stat-word' : 'num'}>{s.value}</strong>
-            <span>{s.label}</span>
-          </div>
-        ))}
-      </div>
-
-      <section className="card card-pad" aria-label="About">
-        <h2 className="section-title">About {mentor.first}</h2>
-        {mentor.bio.map((p) => (
-          <p className="body" key={p}>
-            {p}
-          </p>
-        ))}
-        <div className="teaches">
-          {mentor.teaches.map((t) => (
-            <span className="tag tag-blue" key={t}>
-              {t}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      <section className="parent-note" aria-label="A note for parents">
-        <span className="parent-note-label">A note for parents</span>
-        <p>“{mentor.parentNote}”</p>
-        <span className="parent-note-by">{mentor.name}</span>
-      </section>
-
-      <section className="panel" aria-label="Checked before joining Stride">
-        <div className="panel-head">
-          <h2 className="section-title">Checked before joining Stride</h2>
-          <Icon name="shield" size={18} strokeWidth={1.8} color="var(--accent)" />
-        </div>
-        <ul className="checks">
-          {mentor.checks.map((item) => (
-            <li key={item}>
-              <Icon name="check" size={16} strokeWidth={2} color="var(--accent)" />
-              {item}
-            </li>
-          ))}
-        </ul>
-      </section>
+      {mentor.bio && (
+        <section className="card card-pad" aria-label="About">
+          <h2 className="section-title">About {mentor.first}</h2>
+          <p className="body">{mentor.bio}</p>
+        </section>
+      )}
 
       <div className="callout">
         <Icon name="eye" size={20} strokeWidth={1.6} />

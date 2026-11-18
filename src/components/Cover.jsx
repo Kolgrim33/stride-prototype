@@ -7,7 +7,7 @@ const iconSize = { sm: 24, md: 40, lg: 56 };
 // other photo path; without either it falls back to a tint coloured by category.
 // `label` shows the category name instead of the icon.
 export default function Cover({ type, size = 'md', label = false, photo, image, children }) {
-  const src = image || (photo && `clubs/${photo}.webp`);
+  const src = image || photo || null;
   return (
     <div className={`cover cover-${size}`} data-type={type}>
       {src ? (

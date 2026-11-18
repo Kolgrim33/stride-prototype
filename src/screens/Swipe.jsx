@@ -4,7 +4,6 @@ import Cover from '../components/Cover.jsx';
 import FieldError from '../components/FieldError.jsx';
 import { useStore } from '../store.jsx';
 import { attempt, useBackend } from '../api/index.jsx';
-import { clubFriends } from '../data.js';
 import { allowed, clubList, clubStatus } from '../api/selectors.js';
 
 const THRESHOLD = 90;
@@ -49,7 +48,6 @@ export default function Swipe() {
     else setDx(0);
   };
 
-  const friends = club ? clubFriends[club.id] || [] : [];
 
   return (
     <div className="swipe">
@@ -92,11 +90,6 @@ export default function Swipe() {
                 {club.when} · Ages {club.range}
               </p>
               <p className="body-muted clamp-2">{club.about}</p>
-              {friends.length > 0 && (
-                <p className="keen-line">
-                  <HeartFill size={14} /> {friends.join(' & ')} {friends.length > 1 ? 'go' : 'goes'} here
-                </p>
-              )}
             </div>
           </article>
           <span className="swipe-hint" aria-hidden="true">← swipe →</span>

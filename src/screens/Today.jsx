@@ -5,7 +5,7 @@ import Status from '../components/Status.jsx';
 import MentorAvatar from '../components/MentorAvatar.jsx';
 import { useStore } from '../store.jsx';
 import { useBackend } from '../api/index.jsx';
-import { categories, clubFriends } from '../data.js';
+import { categories } from '../data.js';
 import { clubIdsOf, lessonList, requestsFor, sessionsThisWeek, streak, taskFor, unreadCount, weekHistory } from '../api/selectors.js';
 
 const dayNames = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
@@ -85,14 +85,12 @@ export default function Today() {
 
       <section className="card" aria-label="Your clubs this week">
         {myClubs.map((club) => {
-          const friends = clubFriends[club.id] || [];
           return (
             <a className="list-row" key={club.id} href={`#/club/${club.id}`}>
               <Cover type={club.type} size="sm" photo={club.id} />
               <span className="stack-2 grow">
                 <span className="row-title">{club.shortName || club.name}</span>
                 <span className="row-meta">{club.short}</span>
-                {friends.length > 0 && <span className="tag tag-keen tag-inline">With {friends.join(' & ')}</span>}
               </span>
               <Icon name="arrowRight" size={16} strokeWidth={1.8} color="var(--subtle)" />
             </a>
