@@ -1,3 +1,4 @@
+import Art from '../components/Art.jsx';
 import { useState } from 'react';
 import { Icon } from '../icons.jsx';
 import NavBar from '../components/NavBar.jsx';
@@ -32,10 +33,14 @@ export default function Account() {
     <main className="page">
       {user.role === 'guardian' ? (
         <header className="title-block">
+        <Art name="account" />
           <h1 className="h1">Account</h1>
         </header>
       ) : (
-        <NavBar title="Account" back={homeOf[user.role]} />
+        <>
+          <NavBar title="Account" back={homeOf[user.role]} />
+          <Art name="account" strip />
+        </>
       )}
 
       <section className="profile-card" aria-label="You">

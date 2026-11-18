@@ -1,3 +1,4 @@
+import Art from '../../components/Art.jsx';
 import MeDot from '../../components/MeDot.jsx';
 import { useBackend } from '../../api/index.jsx';
 import { teensOfMentor, threads } from '../../api/selectors.js';
@@ -12,6 +13,7 @@ export default function MentorInbox() {
   return (
     <main className="page">
       <header className="title-block">
+        <Art name="messages" />
         <h1 className="h1">Messages</h1>
         <div className="subline">
           <span>Guardians can read every message</span>

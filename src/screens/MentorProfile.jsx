@@ -1,3 +1,4 @@
+import Art from '../components/Art.jsx';
 import { useState } from 'react';
 import { Icon } from '../icons.jsx';
 import NavBar from '../components/NavBar.jsx';
@@ -15,6 +16,7 @@ export default function MentorProfile({ person }) {
   return (
     <main className="page">
       <NavBar title={user.role === 'mentor' && user.mentorId === mentor.id ? 'Your public profile' : 'Mentor profile'} back={backFor[user.role]} />
+      <Art name="award" strip />
 
       <section className="mentor-hero" aria-label={mentor.name}>
         {mentor.photo && !failed ? (

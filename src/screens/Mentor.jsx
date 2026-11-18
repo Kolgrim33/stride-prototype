@@ -1,3 +1,4 @@
+import Art from '../components/Art.jsx';
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import Status from '../components/Status.jsx';
@@ -108,6 +109,7 @@ export default function Mentor() {
   return (
     <main className="page">
       <header className="title-block">
+        <Art name="mentor" />
         <h1 className="h1">Your mentor</h1>
       </header>
 

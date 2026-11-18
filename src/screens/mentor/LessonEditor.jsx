@@ -1,3 +1,4 @@
+import Art from '../../components/Art.jsx';
 import { useState } from 'react';
 import { Icon } from '../../icons.jsx';
 import NavBar from '../../components/NavBar.jsx';
@@ -46,6 +47,7 @@ export default function LessonEditor({ lesson }) {
     return (
       <main className="page">
         <NavBar title="Edit lesson" back="#/lessons" />
+        <Art name="lessons" strip />
         <p className="body-muted">You can only edit your own lessons.</p>
       </main>
     );
@@ -55,6 +57,7 @@ export default function LessonEditor({ lesson }) {
     <form className="detail" onSubmit={save}>
       <main className="page">
         <NavBar title={lesson ? 'Edit lesson' : 'New lesson'} back={lesson ? `#/lesson/${lesson.id}` : '#/lessons'} />
+        <Art name="lessons" strip />
 
         <label className="stack-8">
           <span className="field-label">Title</span>

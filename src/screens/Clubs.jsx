@@ -1,3 +1,4 @@
+import Art from '../components/Art.jsx';
 import { Icon, HeartFill } from '../icons.jsx';
 import ClubCard from '../components/ClubCard.jsx';
 import { useStore } from '../store.jsx';
@@ -31,6 +32,7 @@ export default function Clubs() {
       )}
 
       <header className="title-block">
+        <Art name="clubs" />
         <h1 className="h1">{isTeen ? 'Discover' : 'Clubs'}</h1>
         <div className="subline">
           <span>

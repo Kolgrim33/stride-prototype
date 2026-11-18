@@ -3093,3 +3093,30 @@ a, button { touch-action: manipulation; }
 .wordmark > span { font-size: 36px; }
 .wordmark-lg > span { font-size: 44px; }
 h2, h3 { font-size: 1.35em; }
+
+/* Page banners: a coloured band with track-lane art, so a page header is never a bare strip of paper. */
+.art { --art: #0b6b3a; position: absolute; inset: 0; overflow: hidden; border-radius: inherit; background: var(--art); color: #fff; z-index: 0; }
+.art-violet { --art: #5b34b0; } .art-teal { --art: #0b6f7a; } .art-ink { --art: #0c1a14; }
+.art-lanes { position: absolute; inset: 0; width: 100%; height: 100%; }
+.art-icon { position: absolute; right: 18px; bottom: 14px; color: var(--signal); display: grid; }
+.art-icon svg { width: 72px; height: 72px; }
+.art-strip { position: relative; inset: auto; height: 84px; border-radius: 20px; flex: none; }
+.art-strip .art-icon svg { width: 52px; height: 52px; }
+.title-block { position: relative; padding: 22px 20px; border-radius: 22px; color: #fff; min-height: 150px; justify-content: flex-end; overflow: hidden; isolation: isolate; }
+.title-block > :not(.art) { position: relative; z-index: 1; max-width: calc(100% - 96px); }
+.title-block .h1, .title-block .subline, .title-block .subline strong, .title-block .body-muted { color: #fff; }
+.title-block .subline { flex-wrap: wrap; gap: 4px 12px; }
+.title-block .progress-line { background: rgba(255,255,255,.28); }
+.title-block .progress-line span { background: var(--signal); }
+.title-block .btn, .title-block a, .title-block button { color: inherit; }
+.title-block .toolbar, .title-block .icon-btn { color: var(--ink); }
+/* Tighter rhythm: 8px scale, less air between blocks */
+.page { gap: 14px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); padding-bottom: 24px; }
+.title-block { min-height: 132px; }
+.toolbar-row { margin-bottom: -4px; }
+.empty { padding: 16px 0; }
+.navbar-title { font-family: var(--font); font-weight: 700; letter-spacing: 0; font-size: 18px; }
+.title-block .h1 { font-size: 48px; }
+/* Empty states: a tinted card with lane rings, not a loose line of grey text */
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 200px; padding: 24px; border-radius: 20px; background: var(--accent-soft); color: var(--ink); text-align: center; }
+.empty::before { content: ''; width: 44px; height: 44px; margin-bottom: 22px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 10px rgba(11,107,58,.18), 0 0 0 22px rgba(11,107,58,.09); }
